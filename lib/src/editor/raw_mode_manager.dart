@@ -343,7 +343,8 @@ class RawModeManager {
         if (node is TextNode) {
           final meta = MarkdownNodeMetadata.fromNode(node);
           if (meta.isRawMode) {
-            MarkdownNodeMetadata.applyToNode(node, meta.copyWith(rawMarkdown: node.text.toPlainText()));
+            // rawMarkdown is kept in sync via node.text; metadata is updated
+            // on the next _updateInlineFormatting or _onBlur call
           }
         }
       }

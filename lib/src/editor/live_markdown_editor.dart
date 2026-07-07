@@ -61,7 +61,13 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final markdown = _editorState.document
-          .map((n) => n.metadata['rawMarkdown'] as String? ?? (n is TextNode ? n.text.toPlainText() : ''))
+          .map((n) {
+            final meta = n.metadata;
+            if (meta['isRawMode'] == true && n is TextNode) {
+              return n.text.toPlainText();
+            }
+            return meta['rawMarkdown'] as String? ?? (n is TextNode ? n.text.toPlainText() : '');
+          })
           .join('\n\n');
       if (widget.controller.text != markdown) {
         widget.controller.replaceContent(markdown);

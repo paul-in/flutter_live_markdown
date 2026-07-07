@@ -39,10 +39,4 @@ class MarkdownNodeMetadata {
       isBlockquote: md['isBlockquote'] as bool? ?? false,
     );
   }
-
-  static void applyToNode(DocumentNode node, MarkdownNodeMetadata meta) {
-    node.metadata['rawMarkdown'] = meta.rawMarkdown;
-    node.metadata['isRawMode'] = meta.isRawMode;
-    node.metadata['isBlockquote'] = meta.isBlockquote;
-  }
 }

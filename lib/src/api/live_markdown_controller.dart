@@ -38,7 +38,14 @@ class LiveMarkdownController extends ChangeNotifier {
   }
 
   String getContentBetween(int start, int end) {
-    return selectionController?.getContentBetween(start, end) ?? '';
+    if (selectionController != null) {
+      return selectionController.getContentBetween(start, end);
+    }
+    // Fallback to local text when not wired to an editor
+    final s = start < 0 ? 0 : start;
+    final e = end > _text.length ? _text.length : end;
+    if (s >= e) return '';
+    return _text.substring(s, e);
   }
 
   void setShowKeyboard(bool visible) {
