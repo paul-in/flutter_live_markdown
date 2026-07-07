@@ -8,8 +8,13 @@ import 'raw_mode_manager.dart';
 
 class LiveMarkdownEditor extends StatefulWidget {
   final LiveMarkdownController controller;
+  final bool cursorInsideMarkers;
 
-  const LiveMarkdownEditor({super.key, required this.controller});
+  const LiveMarkdownEditor({
+    super.key,
+    required this.controller,
+    this.cursorInsideMarkers = true,
+  });
 
   @override
   State<LiveMarkdownEditor> createState() => _LiveMarkdownEditorState();
@@ -23,7 +28,7 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
   void initState() {
     super.initState();
     _initEditor(widget.controller.text);
-    _rawModeManager = RawModeManager(_editorState);
+    _rawModeManager = RawModeManager(_editorState, cursorInsideMarkers: widget.cursorInsideMarkers);
     _editorState.composer.selectionNotifier.addListener(_rawModeManager.onSelectionChange);
     widget.controller.onReloadRequested = _reload;
   }
@@ -57,7 +62,7 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
       reuseScrollController: oldScrollController,
     );
     _editorState.document.addListener(_onDocumentChange);
-    _rawModeManager = RawModeManager(_editorState);
+    _rawModeManager = RawModeManager(_editorState, cursorInsideMarkers: widget.cursorInsideMarkers);
     _editorState.composer.selectionNotifier.addListener(_rawModeManager.onSelectionChange);
     setState(() {});
   }

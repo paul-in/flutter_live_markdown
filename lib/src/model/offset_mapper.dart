@@ -22,16 +22,6 @@ int mapVisualToRawOffset(String visual, String raw, int visualOffset) {
     }
   }
 
-  if (visualOffset == visual.length) {
-    while (rIndex < raw.length) {
-      if (vIndex < visual.length) {
-        if (visual[vIndex] == '\uFFFC') break;
-        if (visual[vIndex] == raw[rIndex]) break;
-      }
-      rIndex++;
-    }
-  }
-
   return rIndex;
 }
 
@@ -84,6 +74,30 @@ List<({int start, int end})> markerRegions(String visual, String raw) {
   }
 
   return regions;
+}
+
+int adjustCursorAtMarkerBoundary(
+  String visual,
+  String raw,
+  int rawOffset, {
+  bool insideMarkers = true,
+}) {
+  final regions = markerRegions(visual, raw);
+  for (int i = 0; i < regions.length; i++) {
+    if (regions[i].start == rawOffset) {
+      final isOpening = i.isEven;
+      if (insideMarkers && isOpening) {
+        // Push past opening markers → content boundary
+        return regions[i].end;
+      }
+      if (!insideMarkers && !isOpening) {
+        // Push past closing markers → outside
+        return regions[i].end;
+      }
+      break;
+    }
+  }
+  return rawOffset;
 }
 
 int mapRawToVisualOffset(String visual, String raw, int rawOffset) {

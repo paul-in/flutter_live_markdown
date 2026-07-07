@@ -16,8 +16,9 @@ class RawModeManager {
   bool _isPointerDown = false;
 
   final bool deferToPointerUp;
+  final bool cursorInsideMarkers;
 
-  RawModeManager(this.editorState, {this.deferToPointerUp = true});
+  RawModeManager(this.editorState, {this.deferToPointerUp = true, this.cursorInsideMarkers = true});
 
   void setPointerDown(bool value) {
     _isPointerDown = value;
@@ -199,7 +200,8 @@ class RawModeManager {
       // Node just focused: original visual → raw offset (expansion done elsewhere)
       final preVisual = preVisualTexts[pos.nodeId] ?? postVisual;
       final mapped = mapVisualToRawOffset(preVisual, raw, currentOffset);
-      return DocumentPosition(nodeId: pos.nodeId, nodePosition: TextNodePosition(offset: mapped));
+      final adjusted = adjustCursorAtMarkerBoundary(preVisual, raw, mapped, insideMarkers: cursorInsideMarkers);
+      return DocumentPosition(nodeId: pos.nodeId, nodePosition: TextNodePosition(offset: adjusted));
     }
 
     if (toBlur.contains(pos.nodeId)) {

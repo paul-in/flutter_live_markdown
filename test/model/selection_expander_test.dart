@@ -229,4 +229,95 @@ void main() {
       expect(expandEdge(visual, raw, 16), 16);
     });
   });
+
+  group('adjustCursorAtMarkerBoundary', () {
+    test('pushes past opening markers at start of bold', () {
+      final visual = 'bold';
+      final raw = '**bold**';
+      // raw 0 = start of opening **
+      expect(adjustCursorAtMarkerBoundary(visual, raw, 0), 2);
+    });
+
+    test('stays at closing marker boundary', () {
+      final visual = 'bold';
+      final raw = '**bold**';
+      // raw 6 = start of closing **
+      expect(adjustCursorAtMarkerBoundary(visual, raw, 6), 6);
+    });
+
+    test('pushes past opening markers in mid-paragraph', () {
+      final visual = 'du texte bold et suite';
+      final raw = 'du texte **bold** et suite';
+      // raw 9 = start of opening ** (after "du texte ")
+      expect(adjustCursorAtMarkerBoundary(visual, raw, 9), 11);
+    });
+
+    test('stays at closing marker boundary in mid-paragraph', () {
+      final visual = 'du texte bold et suite';
+      final raw = 'du texte **bold** et suite';
+      // raw 15 = start of closing **
+      expect(adjustCursorAtMarkerBoundary(visual, raw, 15), 15);
+    });
+
+    test('no adjustment for position not at marker boundary', () {
+      final visual = 'bold';
+      final raw = '**bold**';
+      expect(adjustCursorAtMarkerBoundary(visual, raw, 3), 3);
+      expect(adjustCursorAtMarkerBoundary(visual, raw, 4), 4);
+    });
+
+    test('no adjustment for plain text without markers', () {
+      final visual = 'hello';
+      final raw = 'hello';
+      expect(adjustCursorAtMarkerBoundary(visual, raw, 0), 0);
+      expect(adjustCursorAtMarkerBoundary(visual, raw, 3), 3);
+      expect(adjustCursorAtMarkerBoundary(visual, raw, 5), 5);
+    });
+
+    test('pushes past opening markers for consecutive bold runs', () {
+      // **a** **b**
+      // raw = "**a** **b**", visual = "a b"
+      final visual = 'a b';
+      final raw = '**a** **b**';
+      // raw 0 = start of first opening **
+      expect(adjustCursorAtMarkerBoundary(visual, raw, 0), 2);
+      // raw 3 = start of first closing ** (after content 'a')
+      expect(adjustCursorAtMarkerBoundary(visual, raw, 3), 3);
+      // raw 6 = start of second opening **
+      expect(adjustCursorAtMarkerBoundary(visual, raw, 6), 8);
+      // raw 9 = start of second closing **
+      expect(adjustCursorAtMarkerBoundary(visual, raw, 9), 9);
+    });
+
+    test('insideMarkers: false stays before opening markers', () {
+      final visual = 'bold';
+      final raw = '**bold**';
+      expect(adjustCursorAtMarkerBoundary(visual, raw, 0, insideMarkers: false), 0);
+    });
+
+    test('insideMarkers: false pushes past closing markers', () {
+      final visual = 'bold';
+      final raw = '**bold**';
+      expect(adjustCursorAtMarkerBoundary(visual, raw, 6, insideMarkers: false), 8);
+    });
+
+    test('insideMarkers: false mid-paragraph opening stays', () {
+      final visual = 'du texte bold et suite';
+      final raw = 'du texte **bold** et suite';
+      expect(adjustCursorAtMarkerBoundary(visual, raw, 9, insideMarkers: false), 9);
+    });
+
+    test('insideMarkers: false mid-paragraph closing pushes past', () {
+      final visual = 'du texte bold et suite';
+      final raw = 'du texte **bold** et suite';
+      expect(adjustCursorAtMarkerBoundary(visual, raw, 15, insideMarkers: false), 17);
+    });
+
+    test('insideMarkers: default true matches existing behavior', () {
+      final visual = 'bold';
+      final raw = '**bold**';
+      expect(adjustCursorAtMarkerBoundary(visual, raw, 0), 2);
+      expect(adjustCursorAtMarkerBoundary(visual, raw, 6), 6);
+    });
+  });
 }
