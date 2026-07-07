@@ -22,7 +22,7 @@ class RawModeManager {
   void setPointerDown(bool value) {
     _isPointerDown = value;
     if (!value && deferToPointerUp) {
-      _processSelectionChange();
+      Future.microtask(_processSelectionChange);
     }
   }
 
