@@ -15,7 +15,14 @@ List<MarkdownBlock> splitMarkdownIntoBlocks(String raw) {
           res.addAll(flattenLists(n.children));
         } else if (n.type == 'listItem') {
           res.add(n);
-          res.addAll(flattenLists(n.children));
+          // Recurse into listItem children only to find nested lists,
+          // not inline content (paragraphs, links, etc.)
+          for (final child in n.children) {
+            if (child is md.Element &&
+                (child.type == 'bulletList' || child.type == 'orderedList')) {
+              res.addAll(flattenLists(child.children));
+            }
+          }
         } else {
           res.add(n);
         }
