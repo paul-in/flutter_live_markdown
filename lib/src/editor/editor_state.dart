@@ -3,6 +3,7 @@ import 'package:super_editor/super_editor.dart';
 
 import '../model/markdown_block.dart';
 import '../model/markdown_node_metadata.dart';
+import '../model/markdown_utils.dart';
 import '../parsing/markdown_splitter.dart';
 import 'reconciler.dart';
 
@@ -20,12 +21,10 @@ DocumentNode createNodeForBlock(MarkdownBlock block) {
 
   bool isBlockquote = false;
   String innerRaw = raw;
-  if (raw.trim().startsWith('>')) {
-    isBlockquote = true;
-    innerRaw = raw.split('\n').map((l) {
-      final match = RegExp(r'^>\s?').firstMatch(l);
-      return match != null ? l.substring(match.end) : l;
-    }).join('\n');
+  {
+    final result = parseBlockquote(raw);
+    innerRaw = result.text;
+    isBlockquote = result.isBlockquote;
   }
 
   final doc = deserializeMarkdownToDocument(innerRaw);

@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:super_editor/super_editor.dart';
 
 import '../model/markdown_node_metadata.dart';
+import '../model/markdown_utils.dart';
 import '../model/offset_mapper.dart';
 import '../model/selection_expander.dart';
 import '../parsing/inline_formatter.dart';
@@ -93,15 +94,9 @@ class RawModeManager {
       final wasHR = node is! HorizontalRuleNode && 
           (raw.trim() == '---' || raw.trim() == '***' || raw.trim() == '___');
 
-      String innerRaw = raw;
-      bool isBlockquote = false;
-      if (raw.trim().startsWith('>')) {
-        isBlockquote = true;
-        innerRaw = raw.split('\n').map((l) {
-          final match = RegExp(r'^>\s?').firstMatch(l);
-          return match != null ? l.substring(match.end) : l;
-        }).join('\n');
-      }
+      final parsed = parseBlockquote(raw);
+      String innerRaw = parsed.text;
+      bool isBlockquote = parsed.isBlockquote;
 
       final doc = deserializeMarkdownToDocument(innerRaw);
       final newMeta = meta.copyWith(isRawMode: false);
@@ -309,17 +304,8 @@ class RawModeManager {
     final newMeta = meta.copyWith(rawMarkdown: raw);
 
     // Re-parse to detect block type changes (#, >, etc.)
-    String innerRaw = raw;
-    if (raw.trim().startsWith('>')) {
-      innerRaw = raw.split('\n').map((l) {
-        final match = RegExp(r'^>\s?').firstMatch(l);
-        return match != null ? l.substring(match.end) : l;
-      }).join('\n');
-    }
-    final doc = deserializeMarkdownToDocument(innerRaw);
-    final blockType = doc.isNotEmpty
-        ? doc.first.getMetadataValue(NodeMetadata.blockType)
-        : (innerRaw.trim().isEmpty ? paragraphAttribution : null);
+    final parsed = parseBlockquote(raw);
+    final blockType = detectBlockType(parsed.text);
 
     final newNodeMeta = newMeta.toMap();
     if (blockType != null) {
