@@ -320,4 +320,85 @@ void main() {
       expect(adjustCursorAtMarkerBoundary(visual, raw, 6), 6);
     });
   });
+
+  group('link with title - AST-based markerRegions', () {
+    test('standalone link with title: closing region includes full syntax (no split at space)', () {
+      final visual = 'Atelocynus';
+      final raw = '[Atelocynus](https://fr.wikipedia.org/wiki/Atelocynus "Atelocynus")';
+      final regions = markerRegions(visual, raw);
+      expect(regions.length, 2);
+      expect(regions[0], (start: 0, end: 1)); // '['
+      // closing region should cover everything after the text (including space + title)
+      expect(regions[1].end, raw.length); // includes entire closing syntax
+      // Verify the raw in this region contains the title
+      final rawText = raw.substring(regions[1].start, regions[1].end);
+      expect(rawText, contains('"Atelocynus"'));
+      expect(rawText, contains(')'));
+    });
+
+    test('expansion includes full link with title', () {
+      final visual = 'Atelocynus';
+      final raw = '[Atelocynus](https://fr.wikipedia.org/wiki/Atelocynus "Atelocynus")';
+      // rawStart=1 (inside [), rawEnd=11 (at ])
+      final (start, end) = expandSelectionToMarkers(visual, raw, 1, raw.indexOf(']'));
+      expect(start, 0); // includes [
+      expect(end, raw.length); // includes full closing syntax
+    });
+
+    test('mid-paragraph link with title: closing region not split at space', () {
+      final visual = 'du texte Atelocynus et suite';
+      final raw = 'du texte [Atelocynus](https://fr.wikipedia.org/wiki/Atelocynus "Atelocynus") et suite';
+      final regions = markerRegions(visual, raw);
+      // There should be exactly 2 marker regions (opening [ and closing ...])
+      // if the space before title is handled correctly
+      expect(regions.length, 2);
+      // first region: the '['
+      expect(regions[0], (start: 9, end: 10)); // '['
+      // second region: everything after text until " et suite"
+      // Must include the space before title — proof: region contains "Atelocynus"
+      final closingRaw = raw.substring(regions[1].start, regions[1].end);
+      expect(closingRaw, contains('"Atelocynus"'));
+      expect(closingRaw, contains(')'));
+      // The closing region should end before " et suite"
+      expect(raw.substring(regions[1].end), startsWith(' et suite'));
+    });
+
+    test('mapping and expansion are correct for link with title in paragraph', () {
+      final visual = 'du texte Atelocynus et suite';
+      final raw = 'du texte [Atelocynus](https://fr.wikipedia.org/wiki/Atelocynus "Atelocynus") et suite';
+      // visual offset before 'A' maps to raw position where 'A' is
+      final rawPosA = mapVisualToRawOffset(visual, raw, 9);
+      expect(raw[rawPosA], 'A');
+      // expand entire 'Atelocynus' from first char to last
+      final linkEnd = raw.indexOf(')', 9) + 1; // after closing )
+      // visual selection covering the visible word
+      final (start, end) = expandSelectionToMarkers(
+        visual, raw,
+        raw.indexOf('[') + 1, // before text
+        raw.indexOf(']'),      // after text, before ]
+      );
+      expect(start, raw.indexOf('[')); // includes [
+      expect(end, linkEnd);            // includes )
+      // The expanded text should include the title
+      final expandedRaw = raw.substring(start, end);
+      expect(expandedRaw, contains('"Atelocynus"'));
+    });
+  });
+
+  group('image placeholder with AST', () {
+    test('standalone image: no marker regions', () {
+      final visual = '\uFFFC';
+      final raw = '![alt](url.png)';
+      expect(markerRegions(visual, raw), isEmpty);
+    });
+
+    test('image before text: only gap before image is marker region', () {
+      final visual = '\uFFFCmore';
+      final raw = '![img](p.png)more';
+      final regions = markerRegions(visual, raw);
+      // Nothing before image, image is a content span, then "more" is content
+      // No markers needed for clean text boundaries
+      expect(regions, isEmpty);
+    });
+  });
 }
