@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:super_editor/super_editor.dart';
 
 import '../model/markdown_block.dart';
@@ -5,13 +6,18 @@ import '../model/markdown_node_metadata.dart';
 import '../parsing/markdown_splitter.dart';
 import 'editor_state.dart';
 
+void _log(String msg) => debugPrint('[LIVE_MD] $msg');
+
 class NodeReconciliationReaction extends EditReaction {
   final EditorState editorState;
 
-  NodeReconciliationReaction({required this.editorState});
+  NodeReconciliationReaction({required this.editorState}) {
+    _log('NodeReconciliationReaction created');
+  }
 
   @override
   void modifyContent(EditContext context, RequestDispatcher requestDispatcher, List<EditEvent> changes) {
+    _log('modifyContent: ${changes.length} changes');
     final document = context.find(Editor.documentKey) as MutableDocument;
     final composer = context.find(Editor.composerKey) as MutableDocumentComposer;
 
@@ -25,6 +31,7 @@ class NodeReconciliationReaction extends EditReaction {
 
     if (!needsReconciliation) return;
 
+    _log('modifyContent: starting reconciliation');
     _reconcileNodes(document, composer, requestDispatcher);
   }
 
@@ -33,6 +40,7 @@ class NodeReconciliationReaction extends EditReaction {
     MutableDocumentComposer composer,
     RequestDispatcher requestDispatcher,
   ) {
+    _log('_reconcileNodes: scanning ${document.length} nodes');
     final selection = composer.selection;
     final requests = <EditRequest>[];
     final nodesList = document.toList();

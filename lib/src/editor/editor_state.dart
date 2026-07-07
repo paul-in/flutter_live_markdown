@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter/foundation.dart';
 import 'package:super_editor/super_editor.dart';
 
 import '../model/markdown_block.dart';
@@ -6,6 +7,8 @@ import '../model/markdown_node_metadata.dart';
 import '../parsing/markdown_splitter.dart';
 import '../parsing/inline_formatter.dart';
 import 'reconciler.dart';
+
+void _log(String msg) => debugPrint('[LIVE_MD] $msg');
 
 DocumentNode createNodeForBlock(MarkdownBlock block, {bool isRawMode = false}) {
   final raw = block.text;
@@ -123,14 +126,17 @@ class EditorState {
   late ScrollController scrollController;
 
   void initializeFromMarkdown(String raw) {
+    _log('initializeFromMarkdown: raw="${raw.substring(0, raw.length.clamp(0, 60))}"');
     document = MutableDocument(nodes: []);
     composer = MutableDocumentComposer();
     scrollController = ScrollController();
 
     final blocks = splitMarkdownIntoBlocks(raw);
+    _log('initializeFromMarkdown: split into ${blocks.length} blocks');
     for (final block in blocks) {
       final node = createNodeForBlock(block);
       document.add(node);
+      _log('initializeFromMarkdown: added node ${node.id} type=${node.runtimeType}');
     }
 
     final editableMap = <String, Editable>{
@@ -145,17 +151,20 @@ class EditorState {
       ],
       isHistoryEnabled: true,
     );
+    _log('initializeFromMarkdown: done (${document.length} nodes)');
   }
 
   void rebuild() {
     final raw = document
         .map((n) => MarkdownNodeMetadata.fromNode(n).rawMarkdown)
         .join('\n\n');
+    _log('rebuild: raw length=${raw.length}');
     dispose();
     initializeFromMarkdown(raw);
   }
 
   void dispose() {
+    _log('EditorState dispose');
     document.dispose();
     composer.dispose();
     editor.dispose();

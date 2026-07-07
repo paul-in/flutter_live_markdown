@@ -1,5 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:dart_markdown/dart_markdown.dart' as md;
 import '../model/markdown_block.dart';
+
+void _log(String msg) => debugPrint('[LIVE_MD] $msg');
 
 List<MarkdownBlock> splitMarkdownIntoBlocks(String raw) {
   if (raw.isEmpty) return [];

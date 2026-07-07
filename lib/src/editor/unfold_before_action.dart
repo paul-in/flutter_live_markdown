@@ -1,8 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:super_editor/super_editor.dart';
 
 import 'editor_state.dart';
 import 'raw_mode_manager.dart';
+
+void _log(String msg) => debugPrint('[LIVE_MD] $msg');
 
 class UnfoldBeforeActionHandler {
   final EditorState editorState;
@@ -24,7 +27,10 @@ class UnfoldBeforeActionHandler {
     final selection = editContext.composer.selection;
     if (selection == null) return ExecutionInstruction.continueExecution;
 
+    _log('unfoldBeforeAction: key=${keyEvent.logicalKey} sel=$selection');
+
     if (rawModeManager.isPointerDown) {
+      _log('unfoldBeforeAction: pointer was down, clearing');
       rawModeManager.setPointerDown(false);
     }
 
@@ -41,6 +47,7 @@ class UnfoldBeforeActionHandler {
         if (node != null) {
           final prevNode = editorState.document.getNodeBeforeById(node.id);
           if (prevNode is TextNode) nodesToUnfold.add(prevNode.id);
+          _log('unfoldBeforeAction: backspace at start, adding prev node');
         }
       }
     }
@@ -53,9 +60,11 @@ class UnfoldBeforeActionHandler {
           (pos.nodePosition as TextNodePosition).offset == node.text.length) {
         final nextNode = editorState.document.getNodeAfterById(node.id);
         if (nextNode is TextNode) nodesToUnfold.add(nextNode.id);
+        _log('unfoldBeforeAction: delete at end, adding next node');
       }
     }
 
+    _log('unfoldBeforeAction: unfolding $nodesToUnfold');
     rawModeManager.forceUnfold(nodesToUnfold);
 
     return ExecutionInstruction.continueExecution;

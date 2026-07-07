@@ -1,5 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:super_editor/super_editor.dart';
+
+void _log(String msg) => debugPrint('[LIVE_MD] $msg');
 
 class ScrollAnchor {
   String? _anchorNodeId;
@@ -16,12 +19,18 @@ class ScrollAnchor {
     _relativeY = 0;
     _fallbackOffset = null;
 
-    if (!scrollCtrl.hasClients) return;
+    if (!scrollCtrl.hasClients) {
+      _log('scrollAnchor.save: SKIP (no clients)');
+      return;
+    }
 
     final scrollOffset = scrollCtrl.offset;
     final viewportHeight = scrollCtrl.position.viewportDimension;
 
-    if (viewportHeight <= 0) return;
+    if (viewportHeight <= 0) {
+      _log('scrollAnchor.save: SKIP (viewport height 0)');
+      return;
+    }
 
     // Try to find a stable node (not blurring, not focusing) in the viewport
     String? stableId;
@@ -43,13 +52,18 @@ class ScrollAnchor {
     if (stableId != null) {
       _anchorNodeId = stableId;
       _relativeY = scrollOffset - nodeTop;
+      _log('scrollAnchor.save: anchored to $stableId relY=$_relativeY');
     } else {
       _fallbackOffset = scrollOffset;
+      _log('scrollAnchor.save: no stable node, fallback offset=$scrollOffset');
     }
   }
 
   void restore(DocumentLayout layout, ScrollController scrollCtrl) {
-    if (!scrollCtrl.hasClients) return;
+    if (!scrollCtrl.hasClients) {
+      _log('scrollAnchor.restore: SKIP (no clients)');
+      return;
+    }
 
     if (_anchorNodeId != null) {
       final rect = layout.getRectForPosition(
@@ -58,7 +72,10 @@ class ScrollAnchor {
       if (rect != null) {
         final newOffset = rect.top + _relativeY;
         scrollCtrl.jumpTo(newOffset.clamp(0, scrollCtrl.position.maxScrollExtent));
+        _log('scrollAnchor.restore: restored to offset=$newOffset (anchor=$_anchorNodeId)');
         return;
+      } else {
+        _log('scrollAnchor.restore: anchor node lost, falling back');
       }
     }
 
@@ -66,6 +83,7 @@ class ScrollAnchor {
       scrollCtrl.jumpTo(
         _fallbackOffset!.clamp(0, scrollCtrl.position.maxScrollExtent),
       );
+      _log('scrollAnchor.restore: fallback to $_fallbackOffset');
     }
   }
 

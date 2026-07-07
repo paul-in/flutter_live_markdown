@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:super_editor/super_editor.dart';
@@ -9,6 +10,8 @@ import 'editor_state.dart';
 import 'raw_mode_manager.dart';
 import 'selection_controller.dart';
 import 'unfold_before_action.dart';
+
+void _log(String msg) => debugPrint('[LIVE_MD] $msg');
 
 class LiveMarkdownEditor extends StatefulWidget {
   final LiveMarkdownController controller;
@@ -28,6 +31,7 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
   @override
   void initState() {
     super.initState();
+    _log('LiveMarkdownEditor initState');
     _editorState = EditorState();
     _rawModeManager = RawModeManager(_editorState);
     _selectionController = SelectionController(_editorState);
@@ -37,6 +41,7 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
     );
 
     _editorState.initializeFromMarkdown(widget.controller.text);
+    _log('LiveMarkdownEditor initState: document has ${_editorState.document.length} nodes');
 
     _editorState.composer.selectionNotifier.addListener(_rawModeManager.onSelectionChange);
     _editorState.document.addListener(_onDocumentChange);
@@ -45,10 +50,12 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
     widget.controller.editorState = _editorState;
     widget.controller.rawModeManager = _rawModeManager;
     widget.controller.selectionController = _selectionController;
+    _log('LiveMarkdownEditor initState: done');
   }
 
   @override
   void dispose() {
+    _log('LiveMarkdownEditor dispose');
     _editorState.document.removeListener(_onDocumentChange);
     _editorState.composer.selectionNotifier.removeListener(_rawModeManager.onSelectionChange);
     _rawModeManager.dispose();
@@ -57,6 +64,7 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
   }
 
   void _onDocumentChange(DocumentChangeLog changeLog) {
+    _log('_onDocumentChange: ${changeLog.changes.length} changes');
     _rawModeManager.onDocumentChange(changeLog);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -71,6 +79,7 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
           })
           .join('\n\n');
       if (widget.controller.text != markdown) {
+        _log('_onDocumentChange: updating controller text (${markdown.length} chars)');
         widget.controller.replaceContent(markdown);
       }
     });
@@ -80,10 +89,20 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
 
   @override
   Widget build(BuildContext context) {
+    _log('LiveMarkdownEditor build');
     return Listener(
-      onPointerDown: (_) => _rawModeManager.setPointerDown(true),
-      onPointerUp: (_) => _rawModeManager.setPointerDown(false),
-      onPointerCancel: (_) => _rawModeManager.setPointerDown(false),
+      onPointerDown: (_) {
+        _log('Listener: pointerDown');
+        _rawModeManager.setPointerDown(true);
+      },
+      onPointerUp: (_) {
+        _log('Listener: pointerUp');
+        _rawModeManager.setPointerDown(false);
+      },
+      onPointerCancel: (_) {
+        _log('Listener: pointerCancel');
+        _rawModeManager.setPointerDown(false);
+      },
       child: SuperEditor(
         editor: _editorState.editor,
         scrollController: _editorState.scrollController,
