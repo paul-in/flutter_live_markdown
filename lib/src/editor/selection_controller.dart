@@ -1,4 +1,5 @@
 import 'package:super_editor/super_editor.dart';
+import 'editor_state.dart';
 
 class SelectionController {
   final EditorState editorState;

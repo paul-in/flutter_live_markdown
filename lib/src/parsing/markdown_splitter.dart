@@ -12,12 +12,10 @@ List<MarkdownBlock> splitMarkdownIntoBlocks(String raw) {
     for (final n in list) {
       if (n is md.Element) {
         if (n.type == 'bulletList' || n.type == 'orderedList') {
-          res.addAll(flattenLists(n.children ?? []));
+          res.addAll(flattenLists(n.children));
         } else if (n.type == 'listItem') {
           res.add(n);
-          if (n.children != null) {
-            res.addAll(flattenLists(n.children!));
-          }
+          res.addAll(flattenLists(n.children));
         } else {
           res.add(n);
         }

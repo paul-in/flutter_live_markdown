@@ -1,8 +1,8 @@
 import 'package:super_editor/super_editor.dart';
 
-class NodeReconciliationReaction implements EditReaction {
+class NodeReconciliationReaction extends EditReaction {
   @override
-  Future<List<EditRequest>> react(EditContext context, List<EditEvent> changes) async {
-    return [];
+  void modifyContent(EditContext context, RequestDispatcher requestDispatcher, List<EditEvent> changes) {
+    // Will be implemented in Phase 4.3
   }
 }

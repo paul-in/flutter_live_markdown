@@ -1,10 +1,11 @@
+import 'package:flutter/widgets.dart';
 import 'package:super_editor/super_editor.dart';
 
 class EditorState {
   late MutableDocument document;
   late MutableDocumentComposer composer;
   late Editor editor;
-  late final ScrollController scrollController;
+  late ScrollController scrollController;
 
   void initializeFromMarkdown(String raw) {
     document = MutableDocument(nodes: []);

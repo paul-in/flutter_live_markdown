@@ -1,3 +1,6 @@
+import 'package:flutter/material.dart';
+import 'package:super_editor/super_editor.dart';
+
 Stylesheet customStylesheet(Stylesheet base) {
   return base.copyWith(
     inlineTextStyler: (attributions, existingStyle) {

@@ -1,10 +1,12 @@
 import 'package:super_editor/super_editor.dart';
 
-class FocusManager {
+import 'editor_state.dart';
+
+class RawModeManager {
   final EditorState editorState;
   final Set<String> focusedNodeIds = {};
 
-  FocusManager(this.editorState);
+  RawModeManager(this.editorState);
 
   List<EditRequest> onFocus(String nodeId) {
     return [];

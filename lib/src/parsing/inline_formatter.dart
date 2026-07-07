@@ -1,4 +1,3 @@
-import 'package:attributed_text/attributed_text.dart';
 import 'package:super_editor/super_editor.dart';
 
 AttributedText applyInlineFormatting(String raw) {

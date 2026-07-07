@@ -6,7 +6,7 @@ import '../api/live_markdown_controller.dart';
 import '../rendering/blockquote_wrapper_builder.dart';
 import '../rendering/styles.dart';
 import 'editor_state.dart';
-import 'focus_manager.dart';
+import 'raw_mode_manager.dart';
 import 'reconciler.dart';
 import 'scroll_anchor.dart';
 import 'selection_controller.dart';
@@ -23,18 +23,17 @@ class LiveMarkdownEditor extends StatefulWidget {
 
 class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
   late EditorState _editorState;
-  late FocusManager _focusManager;
+  late RawModeManager _rawModeManager;
   late SelectionController _selectionController;
   late UnfoldBeforeActionHandler _unfoldHandler;
   late ScrollAnchor _scrollAnchor;
-  bool _isApplyingFormatting = false;
   bool _isPointerDown = false;
 
   @override
   void initState() {
     super.initState();
     _editorState = EditorState();
-    _focusManager = FocusManager(_editorState);
+    _rawModeManager = RawModeManager(_editorState);
     _selectionController = SelectionController(_editorState);
     _unfoldHandler = UnfoldBeforeActionHandler();
     _scrollAnchor = ScrollAnchor();
@@ -53,7 +52,7 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
 
   void _onSelectionChange() {}
 
-  void _onDocumentChange() {
+  void _onDocumentChange(DocumentChangeLog changeLog) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final markdown = _editorState.document
