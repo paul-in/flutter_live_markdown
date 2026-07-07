@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:super_editor/super_editor.dart';
 
@@ -14,8 +15,13 @@ class RawModeManager {
   bool _isApplyingFormatting = false;
   bool _isPointerDown = false;
   final ScrollAnchor _scrollAnchor = ScrollAnchor();
+  Timer? _selectionTimer;
 
   RawModeManager(this.editorState);
+
+  void dispose() {
+    _selectionTimer?.cancel();
+  }
 
   Set<String> get focusedNodeIds => Set.unmodifiable(_focusedNodeIds);
   bool get isPointerDown => _isPointerDown;
@@ -26,12 +32,9 @@ class RawModeManager {
 
   void onSelectionChange() {
     if (_isApplyingFormatting) return;
-
-    // Defer to next frame to avoid race with gesture arena.
-    // This ensures the selection is final before we compute toBlur/toFocus.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _processSelectionChange();
-    });
+    // Debounce: collapse rapid selection changes (e.g., drag) into one processing
+    _selectionTimer?.cancel();
+    _selectionTimer = Timer(Duration.zero, _processSelectionChange);
   }
 
   void _processSelectionChange() {

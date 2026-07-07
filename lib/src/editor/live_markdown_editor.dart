@@ -51,6 +51,7 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
   void dispose() {
     _editorState.document.removeListener(_onDocumentChange);
     _editorState.composer.selectionNotifier.removeListener(_rawModeManager.onSelectionChange);
+    _rawModeManager.dispose();
     _editorState.dispose();
     super.dispose();
   }
