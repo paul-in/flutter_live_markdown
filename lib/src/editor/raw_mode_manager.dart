@@ -60,14 +60,20 @@ class RawModeManager {
 
       // Focus: replace with ParagraphNode in raw mode
       final formatted = applyInlineFormatting(meta.rawMarkdown);
+      final nodeMetadata = node.metadata;
+      final blockType = nodeMetadata[NodeMetadata.blockType];
       final newMeta = meta.copyWith(isRawMode: true);
+      final newNodeMeta = newMeta.toMap();
+      if (blockType != null) {
+        newNodeMeta[NodeMetadata.blockType] = blockType;
+      }
       editorState.editor.execute([
         ReplaceNodeRequest(
           existingNodeId: node.id,
           newNode: ParagraphNode(
             id: node.id,
             text: formatted,
-            metadata: newMeta.toMap(),
+            metadata: newNodeMeta,
           ),
         ),
       ]);
@@ -301,6 +307,12 @@ class RawModeManager {
     final raw = node.text.toPlainText();
     final formatted = applyInlineFormatting(raw);
     final newMeta = meta.copyWith(rawMarkdown: raw);
+    final nodeMetadata = node.metadata;
+    final blockType = nodeMetadata[NodeMetadata.blockType];
+    final newNodeMeta = newMeta.toMap();
+    if (blockType != null) {
+      newNodeMeta[NodeMetadata.blockType] = blockType;
+    }
 
     _isApplyingFormatting = true;
     try {
@@ -310,7 +322,7 @@ class RawModeManager {
           newNode: ParagraphNode(
             id: nodeId,
             text: formatted,
-            metadata: newMeta.toMap(),
+            metadata: newNodeMeta,
           ),
         ),
       ]);
