@@ -76,19 +76,25 @@ class InlineSpanMap {
   List<({int start, int end})> get markerRegions => regions;
 
   int mapVisualToRaw(int visualOffset) {
+    // Check if visualOffset is strictly INSIDE a content span.
+    // A visual offset at a span boundary (equals visualStart) is treated
+    // as a gap position and handled below, so the adjuster can decide
+    // which side of the marker gap the cursor should land.
     for (final span in spans) {
-      if (visualOffset >= span.visualStart && visualOffset < span.visualEnd) {
+      if (visualOffset > span.visualStart && visualOffset < span.visualEnd) {
         return span.rawStart + (visualOffset - span.visualStart);
       }
     }
     if (spans.isEmpty) return visualOffset;
-    if (visualOffset <= 0) return spans.first.rawStart;
-    // In a gap between spans: map to next span's rawStart
-    for (final span in spans) {
-      if (visualOffset < span.visualStart) {
-        return span.rawStart;
+    // Before first span → map to rawStart (before opening markers)
+    if (visualOffset <= spans.first.visualStart) return spans.first.rawStart;
+    // Between spans → map to rawEnd of preceding span (before marker gap)
+    for (int i = 1; i < spans.length; i++) {
+      if (visualOffset <= spans[i].visualStart) {
+        return spans[i - 1].rawEnd;
       }
     }
+    // After last span → map to rawEnd (after content)
     return spans.last.rawEnd;
   }
 
