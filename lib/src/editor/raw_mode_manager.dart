@@ -307,8 +307,20 @@ class RawModeManager {
     final raw = node.text.toPlainText();
     final formatted = applyInlineFormatting(raw);
     final newMeta = meta.copyWith(rawMarkdown: raw);
-    final nodeMetadata = node.metadata;
-    final blockType = nodeMetadata[NodeMetadata.blockType];
+
+    // Re-parse to detect block type changes (#, >, etc.)
+    String innerRaw = raw;
+    if (raw.trim().startsWith('>')) {
+      innerRaw = raw.split('\n').map((l) {
+        final match = RegExp(r'^>\s?').firstMatch(l);
+        return match != null ? l.substring(match.end) : l;
+      }).join('\n');
+    }
+    final doc = deserializeMarkdownToDocument(innerRaw);
+    final blockType = doc.isNotEmpty
+        ? doc.first.getMetadataValue(NodeMetadata.blockType)
+        : (innerRaw.trim().isEmpty ? paragraphAttribution : null);
+
     final newNodeMeta = newMeta.toMap();
     if (blockType != null) {
       newNodeMeta[NodeMetadata.blockType] = blockType;
