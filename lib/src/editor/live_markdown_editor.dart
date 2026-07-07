@@ -32,6 +32,7 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
   void dispose() {
     _editorState.document.removeListener(_onDocumentChange);
     _editorState.composer.selectionNotifier.removeListener(_rawModeManager.onSelectionChange);
+    _rawModeManager.dispose();
     _editorState.dispose();
     widget.controller.onReloadRequested = null;
     super.dispose();
@@ -47,6 +48,7 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
     final oldScrollController = _editorState.scrollController;
     _editorState.document.removeListener(_onDocumentChange);
     _editorState.composer.selectionNotifier.removeListener(_rawModeManager.onSelectionChange);
+    _rawModeManager.dispose();
     _editorState.document.dispose();
     _editorState.composer.dispose();
     _editorState.editor.dispose();
@@ -61,6 +63,8 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
   }
 
   void _onDocumentChange(DocumentChangeLog changeLog) {
+    _rawModeManager.onDocumentChange(changeLog);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final markdown = _editorState.document

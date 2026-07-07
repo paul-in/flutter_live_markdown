@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:flutter/widgets.dart';
 import 'package:super_editor/super_editor.dart';
 
 import '../model/markdown_node_metadata.dart';
@@ -9,6 +11,8 @@ import 'editor_state.dart';
 class RawModeManager {
   final EditorState editorState;
   final Set<String> _focusedNodeIds = {};
+  bool _isApplyingFormatting = false;
+  Timer? _formattingTimer;
 
   RawModeManager(this.editorState);
 
@@ -263,6 +267,67 @@ class RawModeManager {
       return editorState.document.getNodesInside(sel.base, sel.extent);
     } catch (_) {
       return [];
+    }
+  }
+
+  void dispose() {
+    _formattingTimer?.cancel();
+  }
+
+  void onDocumentChange(DocumentChangeLog changeLog) {
+    if (_isApplyingFormatting) return;
+    if (_focusedNodeIds.isEmpty) return;
+
+    bool immediateUpdate = false;
+    for (final event in changeLog.changes) {
+      if (event is NodeInsertedEvent) {
+        immediateUpdate = true;
+      }
+    }
+
+    _formattingTimer?.cancel();
+    if (immediateUpdate) {
+      _scheduleFormattingUpdate();
+    } else {
+      _formattingTimer = Timer(const Duration(milliseconds: 100), _scheduleFormattingUpdate);
+    }
+  }
+
+  void _scheduleFormattingUpdate() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_isApplyingFormatting) return;
+      for (final id in _focusedNodeIds) {
+        _updateInlineFormatting(id);
+      }
+    });
+  }
+
+  void _updateInlineFormatting(String nodeId) {
+    final node = editorState.document.getNodeById(nodeId);
+    if (node == null) return;
+
+    final meta = MarkdownNodeMetadata.fromNode(node);
+    if (!meta.isRawMode) return;
+    if (node is! TextNode) return;
+
+    final raw = node.text.toPlainText();
+    final formatted = applyInlineFormatting(raw);
+    final newMeta = meta.copyWith(rawMarkdown: raw);
+
+    _isApplyingFormatting = true;
+    try {
+      editorState.editor.execute([
+        ReplaceNodeRequest(
+          existingNodeId: nodeId,
+          newNode: ParagraphNode(
+            id: nodeId,
+            text: formatted,
+            metadata: newMeta.toMap(),
+          ),
+        ),
+      ]);
+    } finally {
+      _isApplyingFormatting = false;
     }
   }
 }
