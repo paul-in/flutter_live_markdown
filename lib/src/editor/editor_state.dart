@@ -56,7 +56,10 @@ DocumentNode createNodeForBlock(MarkdownBlock block) {
   }
 
   if (parsedNode is HorizontalRuleNode) {
-    return HorizontalRuleNode(id: nodeId);
+    return HorizontalRuleNode(
+      id: nodeId,
+      metadata: MarkdownNodeMetadata(rawMarkdown: raw).toMap(),
+    );
   }
 
   if (parsedNode is ListItemNode) {

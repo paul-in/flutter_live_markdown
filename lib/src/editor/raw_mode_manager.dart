@@ -13,8 +13,7 @@ class RawModeManager {
   RawModeManager(this.editorState);
 
   void onSelectionChange() {
-    // Debounce: wait for gesture arena to settle before reading selection
-    Future.microtask(_processSelectionChange);
+    _processSelectionChange();
   }
 
   void _processSelectionChange() {
@@ -25,22 +24,16 @@ class RawModeManager {
     if (nodes.isEmpty) return;
 
     final node = nodes.first;
-    if (_focusedNodeIds.contains(node.id)) return; // already focused
+    if (_focusedNodeIds.contains(node.id)) return;
 
+    // Check if this node has editable raw markdown
     final meta = MarkdownNodeMetadata.fromNode(node);
-    if (meta.isRawMode) return; // already in raw mode
+    if (meta.isRawMode) return;
+    if (meta.rawMarkdown.isEmpty) return;
 
     _focusedNodeIds.add(node.id);
 
-    // Remap selection from visual to raw offsets
-    DocumentSelection? updatedSel;
-    if (node is TextNode) {
-      updatedSel = _remapSelectionOnFocus(node, sel);
-    }
-
-    // Replace node with raw mode version
-    final raw = meta.rawMarkdown;
-    final formatted = applyInlineFormatting(raw);
+    final formatted = applyInlineFormatting(meta.rawMarkdown);
     final newMeta = meta.copyWith(isRawMode: true);
     final requests = <EditRequest>[
       ReplaceNodeRequest(
@@ -53,15 +46,22 @@ class RawModeManager {
       ),
     ];
 
-    if (updatedSel != null) {
-      requests.add(ChangeSelectionRequest(
-        updatedSel,
-        SelectionChangeType.placeCaret,
-        SelectionReason.userInteraction,
-      ));
-    }
-
     editorState.editor.execute(requests);
+
+    // Set selection AFTER execute to avoid mid-transaction position mismatch
+    if (node is TextNode) {
+      final updatedSel = _remapSelectionOnFocus(node, sel);
+      editorState.composer.setSelectionWithReason(updatedSel);
+    } else {
+      editorState.composer.setSelectionWithReason(
+        DocumentSelection.collapsed(
+          position: DocumentPosition(
+            nodeId: node.id,
+            nodePosition: const TextNodePosition(offset: 0),
+          ),
+        ),
+      );
+    }
   }
 
   DocumentSelection _remapSelectionOnFocus(TextNode node, DocumentSelection sel) {
@@ -69,7 +69,6 @@ class RawModeManager {
     final meta = MarkdownNodeMetadata.fromNode(node);
     final raw = meta.rawMarkdown;
 
-    // Convert upstream/downstream positions to TextNodePosition for offset mapping
     DocumentPosition basePos = sel.base;
     DocumentPosition extentPos = sel.extent;
     if (basePos.nodePosition is UpstreamDownstreamNodePosition) {
@@ -94,7 +93,6 @@ class RawModeManager {
       newExtent = DocumentPosition(nodeId: node.id, nodePosition: TextNodePosition(offset: mapped));
     }
 
-    // Expand to include markers at boundaries
     final baseOffset = newBase.nodePosition is TextNodePosition
         ? (newBase.nodePosition as TextNodePosition).offset
         : 0;
@@ -103,10 +101,7 @@ class RawModeManager {
         : 0;
     final formattedText = applyInlineFormatting(raw);
     final (newRawStart, newRawEnd) = expandSelectionToMarkers(
-      raw,
-      baseOffset,
-      extentOffset,
-      formattedText.spans,
+      raw, baseOffset, extentOffset, formattedText.spans,
     );
 
     return DocumentSelection(
