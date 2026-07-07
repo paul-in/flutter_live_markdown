@@ -16,6 +16,8 @@ class ScrollAnchor {
     _relativeY = 0;
     _fallbackOffset = null;
 
+    if (!scrollCtrl.hasClients) return;
+
     final scrollOffset = scrollCtrl.offset;
     final viewportHeight = scrollCtrl.position.viewportDimension;
 
@@ -47,6 +49,8 @@ class ScrollAnchor {
   }
 
   void restore(DocumentLayout layout, ScrollController scrollCtrl) {
+    if (!scrollCtrl.hasClients) return;
+
     if (_anchorNodeId != null) {
       final rect = layout.getRectForPosition(
         DocumentPosition(nodeId: _anchorNodeId!, nodePosition: const TextNodePosition(offset: 0)),
