@@ -56,7 +56,7 @@ class RawModeManager {
 
       final meta = MarkdownNodeMetadata.fromNode(node);
       if (meta.isRawMode) continue;
-      if (meta.rawMarkdown.isEmpty) continue;
+      // Allow focusing even for empty blocks (e.g., after Enter split)
 
       // Focus: replace with ParagraphNode in raw mode
       final formatted = applyInlineFormatting(meta.rawMarkdown);
