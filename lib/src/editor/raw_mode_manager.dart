@@ -98,27 +98,84 @@ class RawModeManager {
     final extent = _remapPosition(sel.extent, toBlur, toFocus, preVisualTexts);
 
     // Expand selection to include markers in focused nodes
-    DocumentSelection finalSel;
+    DocumentPosition newBase = base;
+    DocumentPosition newExtent = extent;
+
     if (base.nodeId == extent.nodeId && toFocus.contains(base.nodeId)) {
+      // Single node: expand both edges using range-based expander
       final node = editorState.document.getNodeById(base.nodeId);
       if (node is TextNode) {
         final meta = MarkdownNodeMetadata.fromNode(node);
         final raw = meta.rawMarkdown;
         final baseOffset = (base.nodePosition as TextNodePosition).offset;
         final extentOffset = (extent.nodePosition as TextNodePosition).offset;
-        final formattedText = applyInlineFormatting(raw);
-        final (newStart, newEnd) = expandSelectionToMarkers(
-          raw, baseOffset, extentOffset, formattedText.spans,
-        );
-        finalSel = DocumentSelection(
-          base: DocumentPosition(nodeId: base.nodeId, nodePosition: TextNodePosition(offset: newStart)),
-          extent: DocumentPosition(nodeId: extent.nodeId, nodePosition: TextNodePosition(offset: newEnd)),
-        );
-      } else {
-        finalSel = DocumentSelection(base: base, extent: extent);
+        final visual = preVisualTexts[base.nodeId];
+        if (visual != null) {
+          final (newStart, newEnd) = expandSelectionToMarkers(
+            visual,
+            raw,
+            baseOffset,
+            extentOffset,
+          );
+          newBase = DocumentPosition(
+            nodeId: base.nodeId,
+            nodePosition: TextNodePosition(offset: newStart),
+          );
+          newExtent = DocumentPosition(
+            nodeId: extent.nodeId,
+            nodePosition: TextNodePosition(offset: newEnd),
+          );
+        }
       }
     } else {
+      // Multi-node: expand each edge independently
+      // Direction is determined by document order, not by base/extent role,
+      // so that reversed selections (right→left) also expand correctly.
+      final baseIdx = editorState.document.getNodeIndexById(base.nodeId);
+      final extentIdx = editorState.document.getNodeIndexById(extent.nodeId);
+      final baseIsEarlier = baseIdx != -1 && extentIdx != -1 && baseIdx < extentIdx;
+
+      if (toFocus.contains(base.nodeId)) {
+        final node = editorState.document.getNodeById(base.nodeId);
+        if (node is TextNode) {
+          final meta = MarkdownNodeMetadata.fromNode(node);
+          final visual = preVisualTexts[base.nodeId];
+          if (visual != null) {
+            final offset = (base.nodePosition as TextNodePosition).offset;
+            final expanded = baseIsEarlier
+                ? expandStartEdge(visual, meta.rawMarkdown, offset)
+                : expandEndEdge(visual, meta.rawMarkdown, offset);
+            newBase = DocumentPosition(
+              nodeId: base.nodeId,
+              nodePosition: TextNodePosition(offset: expanded),
+            );
+          }
+        }
+      }
+      if (toFocus.contains(extent.nodeId)) {
+        final node = editorState.document.getNodeById(extent.nodeId);
+        if (node is TextNode) {
+          final meta = MarkdownNodeMetadata.fromNode(node);
+          final visual = preVisualTexts[extent.nodeId];
+          if (visual != null) {
+            final offset = (extent.nodePosition as TextNodePosition).offset;
+            final expanded = baseIsEarlier
+                ? expandEndEdge(visual, meta.rawMarkdown, offset)
+                : expandStartEdge(visual, meta.rawMarkdown, offset);
+            newExtent = DocumentPosition(
+              nodeId: extent.nodeId,
+              nodePosition: TextNodePosition(offset: expanded),
+            );
+          }
+        }
+      }
+    }
+
+    final DocumentSelection finalSel;
+    if (identical(newBase, base) && identical(newExtent, extent)) {
       finalSel = DocumentSelection(base: base, extent: extent);
+    } else {
+      finalSel = DocumentSelection(base: newBase, extent: newExtent);
     }
     editorState.composer.setSelectionWithReason(finalSel);
   }

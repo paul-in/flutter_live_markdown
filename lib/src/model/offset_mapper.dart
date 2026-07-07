@@ -35,6 +35,57 @@ int mapVisualToRawOffset(String visual, String raw, int visualOffset) {
   return rIndex;
 }
 
+List<({int start, int end})> markerRegions(String visual, String raw) {
+  final regions = <({int start, int end})>[];
+  int vIndex = 0;
+  int rIndex = 0;
+  bool inRegion = false;
+  int regionStart = 0;
+
+  while (vIndex < visual.length && rIndex < raw.length) {
+    if (vIndex < visual.length && visual[vIndex] == '\uFFFC') {
+      if (rIndex < raw.length && raw[rIndex] == '!') {
+        int closeParen = raw.indexOf(')', rIndex);
+        if (closeParen != -1) {
+          if (inRegion) {
+            regions.add((start: regionStart, end: rIndex));
+            inRegion = false;
+          }
+          rIndex = closeParen + 1;
+          vIndex++;
+          continue;
+        }
+      }
+    }
+
+    if (vIndex < visual.length && visual[vIndex] == raw[rIndex]) {
+      if (inRegion) {
+        regions.add((start: regionStart, end: rIndex));
+        inRegion = false;
+      }
+      vIndex++;
+      rIndex++;
+    } else {
+      if (!inRegion) {
+        regionStart = rIndex;
+        inRegion = true;
+      }
+      rIndex++;
+    }
+  }
+
+  if (rIndex < raw.length) {
+    if (!inRegion) {
+      regionStart = rIndex;
+    }
+    regions.add((start: regionStart, end: raw.length));
+  } else if (inRegion) {
+    regions.add((start: regionStart, end: rIndex));
+  }
+
+  return regions;
+}
+
 int mapRawToVisualOffset(String visual, String raw, int rawOffset) {
   int vIndex = 0;
   int rIndex = 0;
