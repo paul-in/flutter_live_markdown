@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:super_editor/super_editor.dart';
 
@@ -12,7 +11,7 @@ class RawModeManager {
   final EditorState editorState;
   final Set<String> _focusedNodeIds = {};
   bool _isApplyingFormatting = false;
-  Timer? _formattingTimer;
+  bool _formattingScheduled = false;
 
   RawModeManager(this.editorState);
 
@@ -270,31 +269,20 @@ class RawModeManager {
     }
   }
 
-  void dispose() {
-    _formattingTimer?.cancel();
-  }
+  void dispose() {}
 
   void onDocumentChange(DocumentChangeLog changeLog) {
     if (_isApplyingFormatting) return;
     if (_focusedNodeIds.isEmpty) return;
 
-    bool immediateUpdate = false;
-    for (final event in changeLog.changes) {
-      if (event is NodeInsertedEvent) {
-        immediateUpdate = true;
-      }
-    }
-
-    _formattingTimer?.cancel();
-    if (immediateUpdate) {
-      _scheduleFormattingUpdate();
-    } else {
-      _formattingTimer = Timer(const Duration(milliseconds: 100), _scheduleFormattingUpdate);
-    }
+    _scheduleFormattingUpdate();
   }
 
   void _scheduleFormattingUpdate() {
+    if (_formattingScheduled) return;
+    _formattingScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _formattingScheduled = false;
       if (_isApplyingFormatting) return;
       for (final id in _focusedNodeIds) {
         _updateInlineFormatting(id);
