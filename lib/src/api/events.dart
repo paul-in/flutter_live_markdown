@@ -1,1 +1,0 @@
-enum FocusState { focused, unfocused }

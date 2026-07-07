@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'live_markdown.dart';
+import 'package:flutter_live_markdown/live_markdown.dart';
 
 void main() {
   runApp(const MyApp());
@@ -13,7 +13,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Live Markdown',
       theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple)),
-      home: const MyHomePage(title: 'Live Markdown Demo'),
+      home: const MyHomePage(title: 'Feature 1 — Display'),
     );
   }
 }
@@ -29,20 +29,29 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   late LiveMarkdownController _controller;
   final TextEditingController _rawController = TextEditingController(
-    text: '# Welcome\n\nThis is **bold** and *italic*\n\n> A blockquote\n\nPlain paragraph with `code`\n\n---',
+    text: '# Welcome\n\nThis is **bold** and *italic*\n\n> A blockquote\n\nPlain paragraph with `code` inline\n\n---\n\nA [link](https://example.com)',
   );
 
   @override
   void initState() {
     super.initState();
     _controller = LiveMarkdownController(initialMarkdown: _rawController.text);
+    _controller.addListener(_onControllerChange);
   }
 
   @override
   void dispose() {
+    _controller.removeListener(_onControllerChange);
     _controller.dispose();
     _rawController.dispose();
     super.dispose();
+  }
+
+  void _onControllerChange() {
+    // Keep raw controller in sync with editor changes
+    if (_rawController.text != _controller.text) {
+      _rawController.text = _controller.text;
+    }
   }
 
   @override
@@ -68,9 +77,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     children: [
                       const Text("Raw Markdown", style: TextStyle(fontWeight: FontWeight.bold)),
                       ElevatedButton.icon(
-                        onPressed: () {
-                          _controller.replaceContent(_rawController.text);
-                        },
+                        onPressed: () => _controller.replaceContent(_rawController.text),
                         icon: const Icon(Icons.sync),
                         label: const Text("Apply =>"),
                       ),
