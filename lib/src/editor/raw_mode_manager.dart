@@ -59,7 +59,7 @@ class RawModeManager {
     _isApplyingFormatting = true;
     try {
       // Save scroll anchor before mutations
-      final layout = editorState.editor.context.find(Editor.layoutKey) as DocumentLayoutEditable?;
+      final layout = editorState.editor.context.findMaybe<DocumentLayoutEditable>(Editor.layoutKey);
       if (layout != null) {
         _scrollAnchor.save(
           layout.documentLayout,
