@@ -23,45 +23,193 @@ class RawModeManager {
     final nodes = _getNodes(sel);
     if (nodes.isEmpty) return;
 
-    final node = nodes.first;
-    if (_focusedNodeIds.contains(node.id)) return;
+    final nextIds = nodes.map((n) => n.id).toSet();
+    final toBlur = _focusedNodeIds.difference(nextIds);
+    final toFocus = nextIds.difference(_focusedNodeIds);
 
-    // Check if this node has editable raw markdown
-    final meta = MarkdownNodeMetadata.fromNode(node);
-    if (meta.isRawMode) return;
-    if (meta.rawMarkdown.isEmpty) return;
+    if (toBlur.isEmpty && toFocus.isEmpty) return;
 
-    _focusedNodeIds.add(node.id);
+    _focusedNodeIds.clear();
+    _focusedNodeIds.addAll(nextIds);
 
-    final formatted = applyInlineFormatting(meta.rawMarkdown);
-    final newMeta = meta.copyWith(isRawMode: true);
-    final requests = <EditRequest>[
-      ReplaceNodeRequest(
-        existingNodeId: node.id,
-        newNode: ParagraphNode(
-          id: node.id,
-          text: formatted,
-          metadata: newMeta.toMap(),
-        ),
-      ),
-    ];
+    // Build requests: blur first, then focus
+    final requests = <EditRequest>[];
+
+    for (final id in toBlur) {
+      final node = editorState.document.getNodeById(id);
+      if (node == null) continue;
+      if (node is! TextNode) continue;
+      final blurRequests = _onBlur(node);
+      requests.addAll(blurRequests);
+    }
 
     editorState.editor.execute(requests);
 
-    // Set selection AFTER execute to avoid mid-transaction position mismatch
-    if (node is TextNode) {
-      final updatedSel = _remapSelectionOnFocus(node, sel);
-      editorState.composer.setSelectionWithReason(updatedSel);
-    } else {
-      editorState.composer.setSelectionWithReason(
-        DocumentSelection.collapsed(
-          position: DocumentPosition(
-            nodeId: node.id,
-            nodePosition: const TextNodePosition(offset: 0),
+    // Now focus new nodes
+    for (final id in toFocus) {
+      final node = editorState.document.getNodeById(id);
+      if (node == null) continue;
+      if (node is! TextNode) continue;
+
+      final meta = MarkdownNodeMetadata.fromNode(node);
+      if (meta.isRawMode) continue;
+      if (meta.rawMarkdown.isEmpty) continue;
+
+      // Focus: replace with ParagraphNode in raw mode
+      final formatted = applyInlineFormatting(meta.rawMarkdown);
+      final newMeta = meta.copyWith(isRawMode: true);
+      editorState.editor.execute([
+        ReplaceNodeRequest(
+          existingNodeId: node.id,
+          newNode: ParagraphNode(
+            id: node.id,
+            text: formatted,
+            metadata: newMeta.toMap(),
           ),
         ),
-      );
+      ]);
+
+      // Set selection position
+      final updatedSel = _remapSelectionOnFocus(node, sel);
+      editorState.composer.setSelectionWithReason(updatedSel);
     }
+  }
+
+  List<EditRequest> _onBlur(DocumentNode node) {
+    if (node is TextNode) {
+      final raw = node.text.toPlainText();
+      final meta = MarkdownNodeMetadata.fromNode(node);
+
+      // Check if this was originally a HorizontalRuleNode
+      final wasHR = node is! HorizontalRuleNode && 
+          (raw.trim() == '---' || raw.trim() == '***' || raw.trim() == '___');
+
+      String innerRaw = raw;
+      bool isBlockquote = false;
+      if (raw.trim().startsWith('>')) {
+        isBlockquote = true;
+        innerRaw = raw.split('\n').map((l) {
+          final match = RegExp(r'^>\s?').firstMatch(l);
+          return match != null ? l.substring(match.end) : l;
+        }).join('\n');
+      }
+
+      final doc = deserializeMarkdownToDocument(innerRaw);
+      final newMeta = meta.copyWith(isRawMode: false);
+
+      if (wasHR || innerRaw.trim() == '---' || innerRaw.trim() == '***' || innerRaw.trim() == '___') {
+        return [
+          ReplaceNodeRequest(
+            existingNodeId: node.id,
+            newNode: HorizontalRuleNode(
+              id: node.id,
+              metadata: newMeta.toMap(),
+            ),
+          ),
+        ];
+      }
+
+      if (doc.isEmpty) {
+        return [
+          ReplaceNodeRequest(
+            existingNodeId: node.id,
+            newNode: ParagraphNode(
+              id: node.id,
+              text: AttributedText(''),
+              metadata: newMeta.toMap(),
+            ),
+          ),
+        ];
+      }
+
+      final parsedNode = doc.first;
+      final itemMetadata = Map<String, dynamic>.from(parsedNode.metadata);
+      itemMetadata.addAll(newMeta.toMap());
+      if (isBlockquote) {
+        itemMetadata[NodeMetadata.blockType] = blockquoteAttribution;
+      }
+
+      if (parsedNode is HorizontalRuleNode) {
+        return [
+          ReplaceNodeRequest(
+            existingNodeId: node.id,
+            newNode: HorizontalRuleNode(
+              id: node.id,
+              metadata: newMeta.toMap(),
+            ),
+          ),
+        ];
+      }
+
+      if (parsedNode is ListItemNode) {
+        return [
+          ReplaceNodeRequest(
+            existingNodeId: node.id,
+            newNode: ListItemNode(
+              id: node.id,
+              itemType: parsedNode.type,
+              text: parsedNode.text,
+              indent: parsedNode.indent,
+              metadata: itemMetadata,
+            ),
+          ),
+        ];
+      }
+
+      if (parsedNode is TaskNode) {
+        return [
+          ReplaceNodeRequest(
+            existingNodeId: node.id,
+            newNode: TaskNode(
+              id: node.id,
+              text: parsedNode.text,
+              isComplete: parsedNode.isComplete,
+              metadata: itemMetadata,
+            ),
+          ),
+        ];
+      }
+
+      if (parsedNode is ParagraphNode) {
+        return [
+          ReplaceNodeRequest(
+            existingNodeId: node.id,
+            newNode: ParagraphNode(
+              id: node.id,
+              text: parsedNode.text,
+              metadata: itemMetadata,
+            ),
+          ),
+        ];
+      }
+
+      // Fallback
+      return [
+        ReplaceNodeRequest(
+          existingNodeId: node.id,
+          newNode: ParagraphNode(
+            id: node.id,
+            text: parsedNode is TextNode ? parsedNode.text : AttributedText(raw),
+            metadata: itemMetadata,
+          ),
+        ),
+      ];
+    }
+
+    if (node is HorizontalRuleNode) {
+      final meta = MarkdownNodeMetadata.fromNode(node);
+      return [
+        ReplaceNodeRequest(
+          existingNodeId: node.id,
+          newNode: HorizontalRuleNode(
+            id: node.id,
+            metadata: meta.copyWith(isRawMode: false).toMap(),
+          ),
+        ),
+      ];
+    }
+
+    return [];
   }
 
   DocumentSelection _remapSelectionOnFocus(TextNode node, DocumentSelection sel) {
