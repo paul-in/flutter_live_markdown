@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_live_markdown/src/parsing/markdown_splitter.dart';
-import 'package:flutter_live_markdown/src/model/markdown_block.dart';
 
 void main() {
   group('splitMarkdownIntoBlocks', () {
