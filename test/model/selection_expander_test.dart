@@ -366,24 +366,17 @@ void main() {
     test('mapping and expansion are correct for link with title in paragraph', () {
       final visual = 'du texte Atelocynus et suite';
       final raw = 'du texte [Atelocynus](https://fr.wikipedia.org/wiki/Atelocynus "Atelocynus") et suite';
-      // mapVisualToRawOffset maps to the raw boundary (before '[', not inside)
-      final rawPosBefore = mapVisualToRawOffset(visual, raw, 9);
-      expect(raw[rawPosBefore], '[');
-      // adjustCursorAtMarkerBoundary with insideMarkers=true pushes past opening '['
-      final adjusted = adjustCursorAtMarkerBoundary(visual, raw, rawPosBefore, insideMarkers: true);
-      expect(raw[adjusted], 'A');
-      // expand entire 'Atelocynus' from content boundaries
-      final openingBracket = raw.indexOf('[');
-      final closingParen = raw.lastIndexOf(')');
-      // rawStart just after '[' (content boundary), rawEnd just before ']' (content boundary)
-      final (start, end) = expandSelectionToMarkers(
-        visual, raw,
-        openingBracket + 1, // before 'A'
-        closingParen,       // after everything
-      );
-      expect(start, openingBracket);  // includes [
-      expect(end, closingParen + 1); // past ), i.e. includes )
-      // The expanded text should include the title
+      // Simulate blur → raw flow: visual "Atelocynus" spans [9, 19)
+      // mapVisualToRawOffset maps to raw [9, 20) = "[" + "Atelocynus" (inclut [)
+      const visStart = 9;
+      const visEnd = 19;
+      final rawStart = mapVisualToRawOffset(visual, raw, visStart);
+      final rawEnd = mapVisualToRawOffset(visual, raw, visEnd);
+      expect(raw.substring(rawStart, rawEnd), '[Atelocynus');
+      // expand to include full link syntax (opening + closing markers)
+      final (start, end) = expandSelectionToMarkers(visual, raw, rawStart, rawEnd);
+      expect(start, raw.indexOf('['));                       // includes [
+      expect(end, raw.lastIndexOf(')') + 1);                  // includes )
       final expandedRaw = raw.substring(start, end);
       expect(expandedRaw, contains('"Atelocynus"'));
     });

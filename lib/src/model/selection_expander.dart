@@ -8,7 +8,7 @@ int expandStartEdge(String visual, String raw, int rawStart) {
   while (changed) {
     changed = false;
     for (final r in regions) {
-      if (r.end == s || (s > r.start && s < r.end)) {
+      if (r.end == s) {
         s = r.start;
         changed = true;
       }
@@ -25,7 +25,7 @@ int expandEndEdge(String visual, String raw, int rawEnd) {
   while (changed) {
     changed = false;
     for (final r in regions) {
-      if (r.start == e || (e > r.start && e < r.end)) {
+      if (r.start == e) {
         e = r.end;
         changed = true;
       }
