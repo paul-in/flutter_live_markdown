@@ -108,7 +108,7 @@ class EditorState {
       },
       requestHandlers: [...defaultRequestHandlers],
       reactionPipeline: [
-        NakedNodeReconciler(),
+        MarkdownReconciler(createNodeForBlock: createNodeForBlock),
       ],
       isHistoryEnabled: false,
     );
