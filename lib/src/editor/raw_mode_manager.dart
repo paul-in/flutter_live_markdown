@@ -22,14 +22,20 @@ class RawModeManager {
 
   void setPointerDown(bool value) {
     _isPointerDown = value;
-    if (!value) {
-      onSelectionChange();
-    }
   }
 
   void onSelectionChange() {
     if (_isApplyingFormatting) return;
-    if (_isPointerDown) return;
+
+    // Defer to next frame to avoid race with gesture arena.
+    // This ensures the selection is final before we compute toBlur/toFocus.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _processSelectionChange();
+    });
+  }
+
+  void _processSelectionChange() {
+    if (_isApplyingFormatting) return;
 
     final sel = editorState.composer.selection;
     final nextIds = <String>{};
@@ -176,7 +182,6 @@ class RawModeManager {
     final requests = <EditRequest>[];
 
     if (doc.isEmpty) {
-      newMeta.rawMarkdown;
       requests.add(ReplaceNodeRequest(
         existingNodeId: nodeId,
         newNode: ParagraphNode(
