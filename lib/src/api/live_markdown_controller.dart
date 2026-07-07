@@ -33,6 +33,15 @@ class LiveMarkdownController extends ChangeNotifier {
     onChange?.call();
   }
 
+  /// Internal: sync _text from document without reinitializing the editor.
+  /// Called by LiveMarkdownEditor._onDocumentChange to keep _text in sync.
+  void syncFromDocument(String markdown) {
+    if (_text == markdown) return;
+    _text = markdown;
+    notifyListeners();
+    onChange?.call();
+  }
+
   (int, int) getSelectionOffsets() {
     return selectionController?.getSelectionOffsets() ?? (0, 0);
   }

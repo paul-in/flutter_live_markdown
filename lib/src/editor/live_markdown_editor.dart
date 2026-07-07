@@ -79,8 +79,8 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
           })
           .join('\n\n');
       if (widget.controller.text != markdown) {
-        _log('_onDocumentChange: updating controller text (${markdown.length} chars)');
-        widget.controller.replaceContent(markdown);
+        _log('_onDocumentChange: syncing controller text (${markdown.length} chars)');
+        widget.controller.syncFromDocument(markdown);
       }
     });
   }
