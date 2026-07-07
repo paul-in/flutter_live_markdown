@@ -4,6 +4,7 @@ import 'package:super_editor/super_editor.dart';
 import '../model/markdown_block.dart';
 import '../model/markdown_node_metadata.dart';
 import '../parsing/markdown_splitter.dart';
+import 'reconciler.dart';
 
 DocumentNode createNodeForBlock(MarkdownBlock block) {
   final nodeId = Editor.createNodeId();
@@ -107,6 +108,9 @@ class EditorState {
         Editor.composerKey: composer,
       },
       requestHandlers: [...defaultRequestHandlers],
+      reactionPipeline: [
+        NakedNodeReconciler(),
+      ],
       isHistoryEnabled: false,
     );
   }
