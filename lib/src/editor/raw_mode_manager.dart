@@ -36,20 +36,16 @@ class RawModeManager {
     _focusedNodeIds.clear();
     _focusedNodeIds.addAll(nextIds);
 
-    // Build requests: blur first, then focus
+    // Batch ALL blur and focus requests in a single execute
     final requests = <EditRequest>[];
 
     for (final id in toBlur) {
       final node = editorState.document.getNodeById(id);
       if (node == null) continue;
       if (node is! TextNode) continue;
-      final blurRequests = _onBlur(node);
-      requests.addAll(blurRequests);
+      requests.addAll(_onBlur(node));
     }
 
-    editorState.editor.execute(requests);
-
-    // Now focus new nodes
     for (final id in toFocus) {
       final node = editorState.document.getNodeById(id);
       if (node == null) continue;
@@ -57,32 +53,69 @@ class RawModeManager {
 
       final meta = MarkdownNodeMetadata.fromNode(node);
       if (meta.isRawMode) continue;
-      // Allow focusing even for empty blocks (e.g., after Enter split)
 
-      // Focus: replace with ParagraphNode in raw mode
       final formatted = applyInlineFormatting(meta.rawMarkdown);
-      final nodeMetadata = node.metadata;
-      final blockType = nodeMetadata[NodeMetadata.blockType];
+      final blockType = node.metadata[NodeMetadata.blockType];
       final newMeta = meta.copyWith(isRawMode: true);
       final newNodeMeta = newMeta.toMap();
-      if (blockType != null) {
-        newNodeMeta[NodeMetadata.blockType] = blockType;
-      }
-      editorState.editor.execute([
-        ReplaceNodeRequest(
-          existingNodeId: node.id,
-          newNode: ParagraphNode(
-            id: node.id,
-            text: formatted,
-            metadata: newNodeMeta,
-          ),
-        ),
-      ]);
+      if (blockType != null) newNodeMeta[NodeMetadata.blockType] = blockType;
 
-      // Set selection position
-      final updatedSel = _remapSelectionOnFocus(node, sel);
-      editorState.composer.setSelectionWithReason(updatedSel);
+      requests.add(ReplaceNodeRequest(
+        existingNodeId: node.id,
+        newNode: ParagraphNode(
+          id: node.id,
+          text: formatted,
+          metadata: newNodeMeta,
+        ),
+      ));
     }
+
+    if (requests.isEmpty) return;
+    editorState.editor.execute(requests);
+
+    // Remap selection for all affected nodes
+    final base = _remapPosition(sel.base, toBlur, toFocus, false);
+    final extent = _remapPosition(sel.extent, toBlur, toFocus, true);
+    editorState.composer.setSelectionWithReason(
+      DocumentSelection(base: base, extent: extent),
+    );
+  }
+
+  DocumentPosition _remapPosition(
+    DocumentPosition pos,
+    Set<String> toBlur,
+    Set<String> toFocus,
+    bool isExtent,
+  ) {
+    if (pos.nodePosition is! TextNodePosition) return pos;
+
+    final node = editorState.document.getNodeById(pos.nodeId);
+    if (node is! TextNode) return pos;
+    final currentOffset = (pos.nodePosition as TextNodePosition).offset;
+    final meta = MarkdownNodeMetadata.fromNode(node);
+    final visual = node.text.toPlainText();
+    final raw = meta.rawMarkdown;
+
+    if (toFocus.contains(pos.nodeId)) {
+      // Node just focused: visual → raw offset, then expand markers
+      final mapped = mapVisualToRawOffset(visual, raw, currentOffset);
+      if (isExtent) {
+        final formattedText = applyInlineFormatting(raw);
+        final (_, newEnd) = expandSelectionToMarkers(
+          raw, mapped, mapped, formattedText.spans,
+        );
+        return DocumentPosition(nodeId: pos.nodeId, nodePosition: TextNodePosition(offset: newEnd));
+      }
+      return DocumentPosition(nodeId: pos.nodeId, nodePosition: TextNodePosition(offset: mapped));
+    }
+
+    if (toBlur.contains(pos.nodeId)) {
+      // Node just blurred: raw → visual offset
+      final mapped = mapRawToVisualOffset(visual, raw, currentOffset);
+      return DocumentPosition(nodeId: pos.nodeId, nodePosition: TextNodePosition(offset: mapped));
+    }
+
+    return pos;
   }
 
   List<EditRequest> _onBlur(DocumentNode node) {
@@ -214,52 +247,6 @@ class RawModeManager {
     }
 
     return [];
-  }
-
-  DocumentSelection _remapSelectionOnFocus(TextNode node, DocumentSelection sel) {
-    final visual = node.text.toPlainText();
-    final meta = MarkdownNodeMetadata.fromNode(node);
-    final raw = meta.rawMarkdown;
-
-    DocumentPosition basePos = sel.base;
-    DocumentPosition extentPos = sel.extent;
-    if (basePos.nodePosition is UpstreamDownstreamNodePosition) {
-      basePos = DocumentPosition(nodeId: node.id, nodePosition: const TextNodePosition(offset: 0));
-    }
-    if (extentPos.nodePosition is UpstreamDownstreamNodePosition) {
-      final end = node.text.toPlainText().length;
-      extentPos = DocumentPosition(nodeId: node.id, nodePosition: TextNodePosition(offset: end));
-    }
-
-    DocumentPosition? newBase = sel.base;
-    DocumentPosition? newExtent = sel.extent;
-
-    if (sel.base.nodeId == node.id && sel.base.nodePosition is TextNodePosition) {
-      final pos = sel.base.nodePosition as TextNodePosition;
-      final mapped = mapVisualToRawOffset(visual, raw, pos.offset);
-      newBase = DocumentPosition(nodeId: node.id, nodePosition: TextNodePosition(offset: mapped));
-    }
-    if (sel.extent.nodeId == node.id && sel.extent.nodePosition is TextNodePosition) {
-      final pos = sel.extent.nodePosition as TextNodePosition;
-      final mapped = mapVisualToRawOffset(visual, raw, pos.offset);
-      newExtent = DocumentPosition(nodeId: node.id, nodePosition: TextNodePosition(offset: mapped));
-    }
-
-    final baseOffset = newBase.nodePosition is TextNodePosition
-        ? (newBase.nodePosition as TextNodePosition).offset
-        : 0;
-    final extentOffset = newExtent.nodePosition is TextNodePosition
-        ? (newExtent.nodePosition as TextNodePosition).offset
-        : 0;
-    final formattedText = applyInlineFormatting(raw);
-    final (newRawStart, newRawEnd) = expandSelectionToMarkers(
-      raw, baseOffset, extentOffset, formattedText.spans,
-    );
-
-    return DocumentSelection(
-      base: DocumentPosition(nodeId: node.id, nodePosition: TextNodePosition(offset: newRawStart)),
-      extent: DocumentPosition(nodeId: node.id, nodePosition: TextNodePosition(offset: newRawEnd)),
-    );
   }
 
   List<DocumentNode> _getNodes(DocumentSelection sel) {
