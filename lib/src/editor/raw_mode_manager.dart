@@ -13,10 +13,21 @@ class RawModeManager {
   final Set<String> _focusedNodeIds = {};
   bool _isApplyingFormatting = false;
   bool _formattingScheduled = false;
+  bool _isPointerDown = false;
 
-  RawModeManager(this.editorState);
+  final bool deferToPointerUp;
+
+  RawModeManager(this.editorState, {this.deferToPointerUp = true});
+
+  void setPointerDown(bool value) {
+    _isPointerDown = value;
+    if (!value && deferToPointerUp) {
+      _processSelectionChange();
+    }
+  }
 
   void onSelectionChange() {
+    if (deferToPointerUp && _isPointerDown) return;
     _processSelectionChange();
   }
 
@@ -35,6 +46,15 @@ class RawModeManager {
 
     _focusedNodeIds.clear();
     _focusedNodeIds.addAll(nextIds);
+
+    // Capture visual texts BEFORE execute for later offset remapping
+    final Map<String, String> preVisualTexts = {};
+    for (final id in toFocus) {
+      final node = editorState.document.getNodeById(id);
+      if (node is TextNode) {
+        preVisualTexts[id] = node.text.toPlainText();
+      }
+    }
 
     // Batch ALL blur and focus requests in a single execute
     final requests = <EditRequest>[];
@@ -74,18 +94,40 @@ class RawModeManager {
     editorState.editor.execute(requests);
 
     // Remap selection for all affected nodes
-    final base = _remapPosition(sel.base, toBlur, toFocus, false);
-    final extent = _remapPosition(sel.extent, toBlur, toFocus, true);
-    editorState.composer.setSelectionWithReason(
-      DocumentSelection(base: base, extent: extent),
-    );
+    final base = _remapPosition(sel.base, toBlur, toFocus, preVisualTexts);
+    final extent = _remapPosition(sel.extent, toBlur, toFocus, preVisualTexts);
+
+    // Expand selection to include markers in focused nodes
+    DocumentSelection finalSel;
+    if (base.nodeId == extent.nodeId && toFocus.contains(base.nodeId)) {
+      final node = editorState.document.getNodeById(base.nodeId);
+      if (node is TextNode) {
+        final meta = MarkdownNodeMetadata.fromNode(node);
+        final raw = meta.rawMarkdown;
+        final baseOffset = (base.nodePosition as TextNodePosition).offset;
+        final extentOffset = (extent.nodePosition as TextNodePosition).offset;
+        final formattedText = applyInlineFormatting(raw);
+        final (newStart, newEnd) = expandSelectionToMarkers(
+          raw, baseOffset, extentOffset, formattedText.spans,
+        );
+        finalSel = DocumentSelection(
+          base: DocumentPosition(nodeId: base.nodeId, nodePosition: TextNodePosition(offset: newStart)),
+          extent: DocumentPosition(nodeId: extent.nodeId, nodePosition: TextNodePosition(offset: newEnd)),
+        );
+      } else {
+        finalSel = DocumentSelection(base: base, extent: extent);
+      }
+    } else {
+      finalSel = DocumentSelection(base: base, extent: extent);
+    }
+    editorState.composer.setSelectionWithReason(finalSel);
   }
 
   DocumentPosition _remapPosition(
     DocumentPosition pos,
     Set<String> toBlur,
     Set<String> toFocus,
-    bool isExtent,
+    Map<String, String> preVisualTexts,
   ) {
     if (pos.nodePosition is! TextNodePosition) return pos;
 
@@ -93,25 +135,20 @@ class RawModeManager {
     if (node is! TextNode) return pos;
     final currentOffset = (pos.nodePosition as TextNodePosition).offset;
     final meta = MarkdownNodeMetadata.fromNode(node);
-    final visual = node.text.toPlainText();
+    final postVisual = node.text.toPlainText(); // text after execute
     final raw = meta.rawMarkdown;
 
     if (toFocus.contains(pos.nodeId)) {
-      // Node just focused: visual → raw offset, then expand markers
-      final mapped = mapVisualToRawOffset(visual, raw, currentOffset);
-      if (isExtent) {
-        final formattedText = applyInlineFormatting(raw);
-        final (_, newEnd) = expandSelectionToMarkers(
-          raw, mapped, mapped, formattedText.spans,
-        );
-        return DocumentPosition(nodeId: pos.nodeId, nodePosition: TextNodePosition(offset: newEnd));
-      }
+      // Node just focused: original visual → raw offset (expansion done elsewhere)
+      final preVisual = preVisualTexts[pos.nodeId] ?? postVisual;
+      final mapped = mapVisualToRawOffset(preVisual, raw, currentOffset);
       return DocumentPosition(nodeId: pos.nodeId, nodePosition: TextNodePosition(offset: mapped));
     }
 
     if (toBlur.contains(pos.nodeId)) {
       // Node just blurred: raw → visual offset
-      final mapped = mapRawToVisualOffset(visual, raw, currentOffset);
+      // postVisual is the formatted text (after blur), raw is the raw markdown
+      final mapped = mapRawToVisualOffset(postVisual, raw, currentOffset);
       return DocumentPosition(nodeId: pos.nodeId, nodePosition: TextNodePosition(offset: mapped));
     }
 

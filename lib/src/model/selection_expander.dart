@@ -9,45 +9,35 @@ import 'package:attributed_text/attributed_text.dart';
   int newStart = rawStart;
   int newEnd = rawEnd;
 
-  final spanBoundaries = <int>{};
   for (final marker in formattedSpans.markers) {
-    spanBoundaries.add(marker.offset);
-  }
+    final boundary = marker.offset;
+    final markerLen = _markerLength(marker.attribution);
+    if (markerLen == 0) continue;
 
-  for (final boundary in spanBoundaries) {
-    if (newStart == boundary) {
-      newStart = boundary - _scanMarkerBackward(raw, boundary);
+    // Start boundary: opening markers are at [boundary - markerLen, boundary)
+    if (newStart >= boundary - markerLen && newStart <= boundary) {
+      newStart = boundary - markerLen;
     }
-    if (newEnd == boundary) {
-      newEnd = boundary + _scanMarkerForward(raw, boundary);
+    // End boundary: closing markers are at [boundary - markerLen, boundary)
+    // (span includes the closing marker in raw-text coordinates)
+    if (newEnd >= boundary - markerLen && newEnd <= boundary) {
+      newEnd = boundary;
     }
   }
 
   return (newStart.clamp(0, raw.length), newEnd.clamp(0, raw.length));
 }
 
-int _scanMarkerBackward(String raw, int pos) {
-  int len = 0;
-  int i = pos - 1;
-  while (i >= 0 && _isMarkerChar(raw[i])) {
-    len++;
-    i--;
+int _markerLength(Attribution attr) {
+  if (attr is NamedAttribution) {
+    switch (attr.name) {
+      case 'bold':
+      case 'strikethrough':
+        return 2;
+      case 'italics':
+      case 'code':
+        return 1;
+    }
   }
-  if (len > 2) len = 2;
-  return len;
-}
-
-int _scanMarkerForward(String raw, int pos) {
-  int len = 0;
-  int i = pos;
-  while (i < raw.length && _isMarkerChar(raw[i])) {
-    len++;
-    i++;
-  }
-  if (len > 2) len = 2;
-  return len;
-}
-
-bool _isMarkerChar(String c) {
-  return c == '*' || c == '_' || c == '`' || c == '~';
+  return 0;
 }

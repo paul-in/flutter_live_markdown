@@ -79,17 +79,22 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
 
   @override
   Widget build(BuildContext context) {
-    return SuperEditor(
-      editor: _editorState.editor,
-      scrollController: _editorState.scrollController,
-      keyboardActions: [...defaultKeyboardActions],
-      componentBuilders: [
-        const BlockquoteComponentBuilder(),
-        const ImageComponentBuilder(),
-        const MarkdownTableComponentBuilder(),
-        ...defaultComponentBuilders,
-      ],
-      stylesheet: customStylesheet(defaultStylesheet),
+    return Listener(
+      onPointerDown: (_) => _rawModeManager.setPointerDown(true),
+      onPointerUp: (_) => _rawModeManager.setPointerDown(false),
+      onPointerCancel: (_) => _rawModeManager.setPointerDown(false),
+      child: SuperEditor(
+        editor: _editorState.editor,
+        scrollController: _editorState.scrollController,
+        keyboardActions: [...defaultKeyboardActions],
+        componentBuilders: [
+          const BlockquoteComponentBuilder(),
+          const ImageComponentBuilder(),
+          const MarkdownTableComponentBuilder(),
+          ...defaultComponentBuilders,
+        ],
+        stylesheet: customStylesheet(defaultStylesheet),
+      ),
     );
   }
 }
