@@ -5,6 +5,7 @@ import '../model/markdown_block.dart';
 import '../model/markdown_node_metadata.dart';
 import '../parsing/markdown_splitter.dart';
 import '../parsing/inline_formatter.dart';
+import 'reconciler.dart';
 
 DocumentNode createNodeForBlock(MarkdownBlock block, {bool isRawMode = false}) {
   final raw = block.text;
@@ -139,6 +140,9 @@ class EditorState {
     editor = Editor(
       editables: editableMap,
       requestHandlers: [...defaultRequestHandlers],
+      reactionPipeline: [
+        NodeReconciliationReaction(editorState: this),
+      ],
       isHistoryEnabled: true,
     );
   }

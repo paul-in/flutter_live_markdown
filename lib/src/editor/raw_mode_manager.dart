@@ -3,14 +3,17 @@ import 'package:super_editor/super_editor.dart';
 
 import '../model/markdown_node_metadata.dart';
 import '../model/offset_mapper.dart';
+import '../model/selection_expander.dart';
 import '../parsing/inline_formatter.dart';
 import 'editor_state.dart';
+import 'scroll_anchor.dart';
 
 class RawModeManager {
   final EditorState editorState;
   final Set<String> _focusedNodeIds = {};
   bool _isApplyingFormatting = false;
   bool _isPointerDown = false;
+  final ScrollAnchor _scrollAnchor = ScrollAnchor();
 
   RawModeManager(this.editorState);
 
@@ -55,6 +58,17 @@ class RawModeManager {
   void _applyFocusBlur(Set<String> toBlur, Set<String> toFocus) {
     _isApplyingFormatting = true;
     try {
+      // Save scroll anchor before mutations
+      final layout = editorState.editor.context.find(Editor.layoutKey) as DocumentLayoutEditable?;
+      if (layout != null) {
+        _scrollAnchor.save(
+          layout.documentLayout,
+          editorState.scrollController,
+          toBlur,
+          toFocus,
+        );
+      }
+
       DocumentSelection? newSelection = editorState.composer.selection;
       final requests = <EditRequest>[];
 
@@ -78,6 +92,16 @@ class RawModeManager {
       }
 
       _forceUnfoldNodes(toFocus);
+
+      // Restore scroll anchor after layout completes
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (layout != null) {
+          _scrollAnchor.restore(
+            layout.documentLayout,
+            editorState.scrollController,
+          );
+        }
+      });
 
     } finally {
       _isApplyingFormatting = false;
@@ -329,6 +353,24 @@ class RawModeManager {
       final mapped = mapVisualToRawOffset(visual, raw, pos.offset);
       newExtent = DocumentPosition(nodeId: node.id, nodePosition: TextNodePosition(offset: mapped));
     }
+
+    // Expand selection to include markdown markers at boundaries
+    final baseOffset = newBase.nodePosition is TextNodePosition
+        ? (newBase.nodePosition as TextNodePosition).offset
+        : 0;
+    final extentOffset = newExtent.nodePosition is TextNodePosition
+        ? (newExtent.nodePosition as TextNodePosition).offset
+        : 0;
+    final formattedText = applyInlineFormatting(raw);
+    final (newRawStart, newRawEnd) = expandSelectionToMarkers(
+      raw,
+      baseOffset,
+      extentOffset,
+      formattedText.spans,
+    );
+    newBase = DocumentPosition(nodeId: node.id, nodePosition: TextNodePosition(offset: newRawStart));
+    newExtent = DocumentPosition(nodeId: node.id, nodePosition: TextNodePosition(offset: newRawEnd));
+
     return DocumentSelection(base: newBase, extent: newExtent);
   }
 
