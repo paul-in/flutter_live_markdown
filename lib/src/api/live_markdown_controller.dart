@@ -6,6 +6,11 @@ class LiveMarkdownController extends ChangeNotifier {
   bool _hasRedo = false;
   bool _isShowKeyboard = true;
 
+  // Package-private references wired by LiveMarkdownEditor
+  dynamic editorState;
+  dynamic rawModeManager;
+  dynamic selectionController;
+
   String get text => _text;
   bool get hasUndo => _hasUndo;
   bool get hasRedo => _hasRedo;
@@ -23,19 +28,17 @@ class LiveMarkdownController extends ChangeNotifier {
 
   void replaceContent(String markdown) {
     _text = markdown;
+    editorState?.initializeFromMarkdown(markdown);
     notifyListeners();
     onChange?.call();
   }
 
   (int, int) getSelectionOffsets() {
-    return (0, 0);
+    return selectionController?.getSelectionOffsets() ?? (0, 0);
   }
 
   String getContentBetween(int start, int end) {
-    if (start < 0) start = 0;
-    if (end > _text.length) end = _text.length;
-    if (start >= end) return '';
-    return _text.substring(start, end);
+    return selectionController?.getContentBetween(start, end) ?? '';
   }
 
   void setShowKeyboard(bool visible) {
@@ -43,15 +46,27 @@ class LiveMarkdownController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void undo() {}
-  void redo() {}
-  void scrollTo(int rawOffset) {}
-  void blur() {}
-  void clearSelection() {}
-  void clearHistory() {}
+  void undo() {
+    editorState?.editor.undo();
+  }
 
-  @override
-  void dispose() {
-    super.dispose();
+  void redo() {
+    editorState?.editor.redo();
+  }
+
+  void scrollTo(int rawOffset) {
+    selectionController?.scrollTo(rawOffset);
+  }
+
+  void blur() {
+    editorState?.composer.clearSelection();
+  }
+
+  void clearSelection() {
+    selectionController?.clearSelection();
+  }
+
+  void clearHistory() {
+    // Not supported by super_editor directly
   }
 }

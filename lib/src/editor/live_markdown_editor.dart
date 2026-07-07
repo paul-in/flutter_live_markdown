@@ -7,8 +7,6 @@ import '../rendering/blockquote_wrapper_builder.dart';
 import '../rendering/styles.dart';
 import 'editor_state.dart';
 import 'raw_mode_manager.dart';
-import 'reconciler.dart';
-import 'scroll_anchor.dart';
 import 'selection_controller.dart';
 import 'unfold_before_action.dart';
 
@@ -26,8 +24,6 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
   late RawModeManager _rawModeManager;
   late SelectionController _selectionController;
   late UnfoldBeforeActionHandler _unfoldHandler;
-  late ScrollAnchor _scrollAnchor;
-  bool _isPointerDown = false;
 
   @override
   void initState() {
@@ -35,24 +31,33 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
     _editorState = EditorState();
     _rawModeManager = RawModeManager(_editorState);
     _selectionController = SelectionController(_editorState);
-    _unfoldHandler = UnfoldBeforeActionHandler();
-    _scrollAnchor = ScrollAnchor();
+    _unfoldHandler = UnfoldBeforeActionHandler(
+      editorState: _editorState,
+      rawModeManager: _rawModeManager,
+    );
 
-    _editorState.composer.selectionNotifier.addListener(_onSelectionChange);
+    _editorState.initializeFromMarkdown(widget.controller.text);
+
+    _editorState.composer.selectionNotifier.addListener(_rawModeManager.onSelectionChange);
     _editorState.document.addListener(_onDocumentChange);
+
+    // Wire controller
+    widget.controller.editorState = _editorState;
+    widget.controller.rawModeManager = _rawModeManager;
+    widget.controller.selectionController = _selectionController;
   }
 
   @override
   void dispose() {
     _editorState.document.removeListener(_onDocumentChange);
-    _editorState.composer.selectionNotifier.removeListener(_onSelectionChange);
+    _editorState.composer.selectionNotifier.removeListener(_rawModeManager.onSelectionChange);
     _editorState.dispose();
     super.dispose();
   }
 
-  void _onSelectionChange() {}
-
   void _onDocumentChange(DocumentChangeLog changeLog) {
+    _rawModeManager.onDocumentChange(changeLog);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final markdown = _editorState.document
@@ -69,24 +74,19 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
   @override
   Widget build(BuildContext context) {
     return Listener(
-      onPointerDown: (_) => _isPointerDown = true,
-      onPointerUp: (_) {
-        _isPointerDown = false;
-        _onSelectionChange();
-      },
-      onPointerCancel: (_) {
-        _isPointerDown = false;
-        _onSelectionChange();
-      },
+      onPointerDown: (_) => _rawModeManager.setPointerDown(true),
+      onPointerUp: (_) => _rawModeManager.setPointerDown(false),
+      onPointerCancel: (_) => _rawModeManager.setPointerDown(false),
       child: SuperEditor(
         editor: _editorState.editor,
         scrollController: _editorState.scrollController,
         keyboardActions: [
           _unfoldHandler.handle,
+          _customEnterHandler,
           ...defaultKeyboardActions,
         ],
         componentBuilders: [
-          BlockquoteWrapperBuilder(defaultComponentBuilders),
+          BlockquoteWrapperBuilder(_editorState.document, defaultComponentBuilders),
           const ImageComponentBuilder(),
           const MarkdownTableComponentBuilder(),
           ...defaultComponentBuilders,
@@ -94,5 +94,76 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
         stylesheet: _customStylesheet,
       ),
     );
+  }
+
+  ExecutionInstruction _customEnterHandler({
+    required SuperEditorContext editContext,
+    required KeyEvent keyEvent,
+  }) {
+    if (keyEvent is! KeyDownEvent && keyEvent is! KeyRepeatEvent) {
+      return ExecutionInstruction.continueExecution;
+    }
+    if (keyEvent.logicalKey != LogicalKeyboardKey.enter &&
+        keyEvent.logicalKey != LogicalKeyboardKey.numpadEnter) {
+      return ExecutionInstruction.continueExecution;
+    }
+
+    final selection = editContext.composer.selection;
+    if (selection == null || !selection.isCollapsed) return ExecutionInstruction.continueExecution;
+
+    final node = editContext.document.getNodeById(selection.extent.nodeId);
+    if (node is! TextNode) return ExecutionInstruction.continueExecution;
+
+    final text = node.text.toPlainText();
+    final textTrimmed = text.trimLeft();
+
+    // Multiline blocks: tables (|), blockquotes (>), code blocks (```)
+    final isMultiLineMode = textTrimmed.startsWith('|') ||
+        textTrimmed.startsWith('>') ||
+        textTrimmed.startsWith('```');
+
+    if (isMultiLineMode) {
+      final offset = (selection.extent.nodePosition as TextNodePosition).offset;
+      if (offset > 0 && text.substring(offset - 1, offset) == '\n') {
+        // Double Enter: exit multiline block
+        editContext.editor.execute([
+          DeleteContentRequest(
+            documentRange: DocumentRange(
+              start: DocumentPosition(
+                nodeId: node.id,
+                nodePosition: TextNodePosition(offset: offset - 1),
+              ),
+              end: DocumentPosition(
+                nodeId: node.id,
+                nodePosition: TextNodePosition(offset: offset),
+              ),
+            ),
+          ),
+          ChangeSelectionRequest(
+            DocumentSelection.collapsed(
+              position: DocumentPosition(
+                nodeId: node.id,
+                nodePosition: TextNodePosition(offset: offset - 1),
+              ),
+            ),
+            SelectionChangeType.placeCaret,
+            SelectionReason.userInteraction,
+          ),
+        ]);
+        return ExecutionInstruction.continueExecution;
+      } else {
+        // Single Enter: insert newline
+        editContext.editor.execute([
+          InsertTextRequest(
+            documentPosition: selection.extent,
+            textToInsert: '\n',
+            attributions: editContext.composer.preferences.currentAttributions,
+          ),
+        ]);
+        return ExecutionInstruction.haltExecution;
+      }
+    }
+
+    return ExecutionInstruction.continueExecution;
   }
 }
