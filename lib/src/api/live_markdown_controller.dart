@@ -1,11 +1,19 @@
 import 'package:flutter/foundation.dart';
+import 'package:super_editor/super_editor.dart';
 
+import '../editor/editor_state.dart';
+
+
+// Contains Public API
 class LiveMarkdownController extends ChangeNotifier {
   String _text = '';
+  EditorState? _editorState;
 
   String get text => _text;
 
   VoidCallback? onChange;
+  VoidCallback? onSelectionChange;
+  VoidCallback? onFocusChange;
   VoidCallback? onReloadRequested;
 
   LiveMarkdownController({String? initialMarkdown}) {
@@ -14,7 +22,33 @@ class LiveMarkdownController extends ChangeNotifier {
     }
   }
 
-  /// Public API: replace all content and reinitialize the editor.
+  /// Internal: attach to an EditorState after the widget initializes.
+  void attachToEditor(EditorState editorState) {
+    _editorState = editorState;
+    editorState.composer.selectionNotifier.addListener(_onSelectionChanged);
+    editorState.editorFocusNode.addListener(_onFocusChanged);
+  }
+
+  void _onSelectionChanged() {
+    onSelectionChange?.call();
+  }
+
+  void _onFocusChanged() {
+    onFocusChange?.call();
+  }
+
+  void detachFromEditor() {
+    final es = _editorState;
+    if (es != null) {
+      es.composer.selectionNotifier.removeListener(_onSelectionChanged);
+      es.editorFocusNode.removeListener(_onFocusChanged);
+    }
+    _editorState = null;
+  }
+
+  // ── Public API ──────────────────────────────────────────
+
+  /// Replaces all content and reinitializes the editor.
   void replaceContent(String markdown) {
     _text = markdown;
     onReloadRequested?.call();
@@ -28,5 +62,111 @@ class LiveMarkdownController extends ChangeNotifier {
     _text = markdown;
     notifyListeners();
     onChange?.call();
+  }
+
+  /// Returns the absolute raw-markdown offset of the selection start.
+  int get selectionStart {
+    final es = _editorState;
+    if (es == null) return 0;
+    final sel = es.composer.selection;
+    if (sel == null) return 0;
+    return _nodeToGlobalOffset(sel.base.nodeId, (sel.base.nodePosition as TextNodePosition).offset);
+  }
+
+  /// Returns the absolute raw-markdown offset of the selection extent.
+  int get selectionEnd {
+    final es = _editorState;
+    if (es == null) return 0;
+    final sel = es.composer.selection;
+    if (sel == null) return 0;
+    return _nodeToGlobalOffset(sel.extent.nodeId, (sel.extent.nodePosition as TextNodePosition).offset);
+  }
+
+  int _nodeToGlobalOffset(String nodeId, int localOffset) {
+    final doc = _editorState!.document;
+    int global = 0;
+    for (final n in doc) {
+      if (n.id == nodeId) return global + localOffset;
+      final raw = n.metadata['rawMarkdown'] as String? ?? (n is TextNode ? n.text.toPlainText() : '');
+      global += raw.length + 2;
+    }
+    return global + localOffset;
+  }
+
+  /// Returns the raw markdown text between two absolute offsets.
+  String getContentBetween(int start, int end) {
+    if (start < 0) start = 0;
+    if (end > _text.length) end = _text.length;
+    if (start >= end) return '';
+    return _text.substring(start, end);
+  }
+
+  /// Scrolls the editor to try to bring the position at [globalOffset] into view.
+  /// Uses a rough approximation based on node index and scroll controller position.
+  void scrollTo(int globalOffset) {
+    final es = _editorState;
+    if (es == null) return;
+    int accumulated = 0;
+    int nodeIndex = 0;
+    for (final n in es.document) {
+      final raw = n.metadata['rawMarkdown'] as String? ?? (n is TextNode ? n.text.toPlainText() : '');
+      final rawLen = raw.length;
+      if (globalOffset <= accumulated + rawLen) break;
+      accumulated += rawLen + 2;
+      nodeIndex++;
+    }
+    final nodeCount = es.document.length;
+    if (nodeCount == 0) return;
+    final ratio = nodeCount > 1 ? nodeIndex / (nodeCount - 1) : 0.0;
+    final scrollPos = ratio * es.scrollController.position.maxScrollExtent;
+    es.scrollController.jumpTo(scrollPos.clamp(0.0, es.scrollController.position.maxScrollExtent));
+  }
+
+  /// Removes focus from the editor.
+  void blur() {
+    _editorState?.editorFocusNode.unfocus();
+  }
+
+  /// Clears the current selection (collapses to a single point at cursor).
+  void clearSelection() {
+    final es = _editorState;
+    if (es == null) return;
+    final sel = es.composer.selection;
+    if (sel != null && !sel.isCollapsed) {
+      es.composer.setSelectionWithReason(
+        DocumentSelection.collapsed(position: sel.extent),
+      );
+    }
+  }
+
+  /// Whether undo is available.
+  bool get canUndo {
+    final es = _editorState;
+    if (es == null) return false;
+    return es.editor.isHistoryEnabled && es.editor.history.isNotEmpty;
+  }
+
+  /// Whether redo is available.
+  bool get canRedo {
+    final es = _editorState;
+    if (es == null) return false;
+    return es.editor.isHistoryEnabled && es.editor.future.isNotEmpty;
+  }
+
+  /// Undoes the last undoable transaction.
+  void undo() => _editorState?.editor.undo();
+
+  /// Redoes the last undone transaction.
+  void redo() => _editorState?.editor.redo();
+
+  /// Controls whether the software keyboard should be shown.
+  /// Requires a widget rebuild to take effect — stubbed until the widget infrastructure is ready.
+  void setShowKeyboard(bool show) {
+    debugPrint('[LiveMarkdownController] setShowKeyboard($show) — not yet wired');
+  }
+
+  /// Clears the undo/redo history.
+  void clearHistory() {
+    debugPrint('[LiveMarkdownController] clearHistory() — not yet wired');
   }
 }

@@ -190,6 +190,7 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
   void initState() {
     super.initState();
     _initEditor(widget.controller.text);
+    widget.controller.attachToEditor(_editorState);
     _rawModeManager = RawModeManager(
       _editorState,
       deferToPointerUp: widget.deferToPointerUp,
@@ -201,6 +202,7 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
 
   @override
   void dispose() {
+    widget.controller.detachFromEditor();
     _editorState.document.removeListener(_onDocumentChange);
     _editorState.composer.selectionNotifier.removeListener(_rawModeManager.onSelectionChange);
     _rawModeManager.dispose();
@@ -216,6 +218,7 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
   }
 
   void _reload() {
+    widget.controller.detachFromEditor();
     final oldScrollController = _editorState.scrollController;
     _editorState.document.removeListener(_onDocumentChange);
     _editorState.composer.selectionNotifier.removeListener(_rawModeManager.onSelectionChange);
@@ -227,6 +230,7 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
       widget.controller.text,
       reuseScrollController: oldScrollController,
     );
+    widget.controller.attachToEditor(_editorState);
     _editorState.document.addListener(_onDocumentChange);
     _rawModeManager = RawModeManager(
       _editorState,
@@ -260,6 +264,7 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
       onPointerCancel: (_) => _rawModeManager.setPointerDown(false),
       child: SuperEditor(
         editor: _editorState.editor,
+        focusNode: _editorState.editorFocusNode,
         scrollController: _editorState.scrollController,
         keyboardActions: [
           ({required SuperEditorContext editContext, required KeyEvent keyEvent}) =>

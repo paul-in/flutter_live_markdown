@@ -89,11 +89,13 @@ class EditorState {
   late MutableDocument document;
   late MutableDocumentComposer composer;
   late Editor editor;
+  late FocusNode editorFocusNode;
   late ScrollController scrollController;
 
   void initializeFromMarkdown(String raw, {ScrollController? reuseScrollController}) {
     document = MutableDocument(nodes: []);
     composer = MutableDocumentComposer();
+    editorFocusNode = FocusNode();
     scrollController = reuseScrollController ?? ScrollController();
 
     final blocks = splitMarkdownIntoBlocks(raw);
@@ -110,7 +112,7 @@ class EditorState {
       reactionPipeline: [
         MarkdownReconciler(createNodeForBlock: createNodeForBlock),
       ],
-      isHistoryEnabled: false,
+      isHistoryEnabled: true,
     );
   }
 
@@ -118,6 +120,7 @@ class EditorState {
     document.dispose();
     composer.dispose();
     editor.dispose();
+    editorFocusNode.dispose();
     scrollController.dispose();
   }
 }
