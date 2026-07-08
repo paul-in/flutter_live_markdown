@@ -32,14 +32,26 @@ class _MyHomePageState extends State<MyHomePage> {
   int _selCount = 0;
   bool _isFocused = false;
   String _extractedContent = '';
+  bool _apiMode = true;
+  bool _deferToPointerUp = true;
+  bool _cursorInsideMarkers = true;
 
   @override
   void initState() {
     super.initState();
     _ctrl = LiveMarkdownController(initialMarkdown: _initial);
-    _ctrl.onChange = () => setState(() => _changeCount++);
-    _ctrl.onSelectionChange = () => setState(() => _selCount++);
-    _ctrl.onFocusChange = () => setState(() => _isFocused = !_isFocused);
+    _ctrl.onChange = () {
+      _changeCount++;
+      if (_apiMode) setState(() {});
+    };
+    _ctrl.onSelectionChange = () {
+      _selCount++;
+      if (_apiMode) setState(() {});
+    };
+    _ctrl.onFocusChange = () {
+      _isFocused = !_isFocused;
+      if (_apiMode) setState(() {});
+    };
   }
 
   @override
@@ -54,10 +66,16 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) => Scaffold(
         body: Row(
           children: [
-            Expanded(child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: LiveMarkdownEditor(controller: _ctrl),
-            )),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: LiveMarkdownEditor(
+                  controller: _ctrl,
+                  deferToPointerUp: _deferToPointerUp,
+                  cursorInsideMarkers: _cursorInsideMarkers,
+                ),
+              ),
+            ),
             Container(width: 1, color: Colors.grey.shade300),
             Expanded(
               child: SingleChildScrollView(
@@ -65,7 +83,17 @@ class _MyHomePageState extends State<MyHomePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    _buildSection('Editor config'),
+                    const SizedBox(height: 4),
+                    _configToggle('Defer selection to pointer up', _deferToPointerUp, (v) {
+                      if (v != null) setState(() => _deferToPointerUp = v);
+                    }),
+                    _configToggle('Cursor inside markers', _cursorInsideMarkers, (v) {
+                      if (v != null) setState(() => _cursorInsideMarkers = v);
+                    }),
+                    const SizedBox(height: 12),
                     _buildSection('API'),
+                    _apiToggle(),
                     const SizedBox(height: 8),
                     _selectionInfo(),
                     const SizedBox(height: 8),
@@ -86,9 +114,37 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
       );
 
+  Widget _configToggle(String label, bool value, ValueChanged<bool?> onChanged) => Row(
+        children: [
+          SizedBox(
+            height: 24,
+            child: Checkbox(
+              value: value,
+              onChanged: onChanged,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(label, style: const TextStyle(fontSize: 13)),
+        ],
+      );
+
   Widget _buildSection(String title) => Text(
         title,
         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey),
+      );
+
+  Widget _apiToggle() => Row(
+        children: [
+          const Text('Monitor', style: TextStyle(fontSize: 13)),
+          Switch(
+            value: _apiMode,
+            onChanged: (v) => setState(() => _apiMode = v),
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          Text('ON : events tracked in real time  OFF : max fluidity',
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+        ],
       );
 
   Widget _selectionInfo() => _infoRow(

@@ -201,6 +201,18 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
   }
 
   @override
+  void didUpdateWidget(LiveMarkdownEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.deferToPointerUp != widget.deferToPointerUp ||
+        oldWidget.cursorInsideMarkers != widget.cursorInsideMarkers) {
+      _rawModeManager.updateConfig(
+        deferToPointerUp: widget.deferToPointerUp,
+        cursorInsideMarkers: widget.cursorInsideMarkers,
+      );
+    }
+  }
+
+  @override
   void dispose() {
     widget.controller.detachFromEditor();
     _editorState.document.removeListener(_onDocumentChange);

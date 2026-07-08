@@ -15,10 +15,15 @@ class RawModeManager {
   bool _formattingScheduled = false;
   bool _isPointerDown = false;
 
-  final bool deferToPointerUp;
-  final bool cursorInsideMarkers;
+  bool deferToPointerUp;
+  bool cursorInsideMarkers;
 
   RawModeManager(this.editorState, {this.deferToPointerUp = true, this.cursorInsideMarkers = true});
+
+  void updateConfig({bool? deferToPointerUp, bool? cursorInsideMarkers}) {
+    if (deferToPointerUp != null) this.deferToPointerUp = deferToPointerUp;
+    if (cursorInsideMarkers != null) this.cursorInsideMarkers = cursorInsideMarkers;
+  }
 
   void setPointerDown(bool value) {
     _isPointerDown = value;
