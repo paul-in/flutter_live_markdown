@@ -70,6 +70,9 @@ class LiveMarkdownController extends ChangeNotifier {
     if (es == null) return 0;
     final sel = es.composer.selection;
     if (sel == null) return 0;
+    if (sel.base.nodePosition is! TextNodePosition) {
+      return _nodeToGlobalOffset(sel.base.nodeId, 0);
+    }
     return _nodeToGlobalOffset(sel.base.nodeId, (sel.base.nodePosition as TextNodePosition).offset);
   }
 
@@ -79,6 +82,9 @@ class LiveMarkdownController extends ChangeNotifier {
     if (es == null) return 0;
     final sel = es.composer.selection;
     if (sel == null) return 0;
+    if (sel.extent.nodePosition is! TextNodePosition) {
+      return _nodeToGlobalOffset(sel.extent.nodeId, 0);
+    }
     return _nodeToGlobalOffset(sel.extent.nodeId, (sel.extent.nodePosition as TextNodePosition).offset);
   }
 
