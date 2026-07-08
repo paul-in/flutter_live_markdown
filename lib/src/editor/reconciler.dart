@@ -45,7 +45,7 @@ class MarkdownReconciler extends EditReaction {
           allRequests.add(InsertNodeAfterNodeRequest(existingNodeId: prevId!, newNode: newNode));
         }
         if (!selectionHandled) {
-          _preserveSelectionOnSplit(selection, node.id, blocks[i], newNode.id, allRequests);
+          _preserveSelectionOnSplit(selection, node.id, blocks[i], newNode, allRequests);
           if (allRequests.isNotEmpty && allRequests.last is ChangeSelectionRequest) {
             selectionHandled = true;
           }
@@ -178,16 +178,29 @@ class MarkdownReconciler extends EditReaction {
           globalOldOffset >= blocks[i].startOffset &&
           globalOldOffset <= blocks[i].endOffset &&
           !selectionHandled) {
-        allRequests.add(ChangeSelectionRequest(
-          DocumentSelection.collapsed(
-            position: DocumentPosition(
-              nodeId: newNode.id,
-              nodePosition: TextNodePosition(offset: globalOldOffset - blocks[i].startOffset),
+        if (newNode is TextNode) {
+          allRequests.add(ChangeSelectionRequest(
+            DocumentSelection.collapsed(
+              position: DocumentPosition(
+                nodeId: newNode.id,
+                nodePosition: TextNodePosition(offset: globalOldOffset - blocks[i].startOffset),
+              ),
             ),
-          ),
-          SelectionChangeType.placeCaret,
-          SelectionReason.userInteraction,
-        ));
+            SelectionChangeType.placeCaret,
+            SelectionReason.userInteraction,
+          ));
+        } else {
+          allRequests.add(ChangeSelectionRequest(
+            DocumentSelection.collapsed(
+              position: DocumentPosition(
+                nodeId: newNode.id,
+                nodePosition: const UpstreamDownstreamNodePosition.downstream(),
+              ),
+            ),
+            SelectionChangeType.placeCaret,
+            SelectionReason.userInteraction,
+          ));
+        }
       }
       prevId = newNode.id;
     }
@@ -218,7 +231,7 @@ class MarkdownReconciler extends EditReaction {
     DocumentSelection? selection,
     String oldNodeId,
     MarkdownBlock block,
-    String newNodeId,
+    DocumentNode newNode,
     List<EditRequest> requests,
   ) {
     if (selection == null) return;
@@ -230,16 +243,29 @@ class MarkdownReconciler extends EditReaction {
 
       final offset = (pos.nodePosition as TextNodePosition).offset;
       if (offset >= block.startOffset && offset <= block.endOffset) {
-        requests.add(ChangeSelectionRequest(
-          DocumentSelection.collapsed(
-            position: DocumentPosition(
-              nodeId: newNodeId,
-              nodePosition: TextNodePosition(offset: offset - block.startOffset),
+        if (newNode is TextNode) {
+          requests.add(ChangeSelectionRequest(
+            DocumentSelection.collapsed(
+              position: DocumentPosition(
+                nodeId: newNode.id,
+                nodePosition: TextNodePosition(offset: offset - block.startOffset),
+              ),
             ),
-          ),
-          SelectionChangeType.placeCaret,
-          SelectionReason.userInteraction,
-        ));
+            SelectionChangeType.placeCaret,
+            SelectionReason.userInteraction,
+          ));
+        } else {
+          requests.add(ChangeSelectionRequest(
+            DocumentSelection.collapsed(
+              position: DocumentPosition(
+                nodeId: newNode.id,
+                nodePosition: const UpstreamDownstreamNodePosition.downstream(),
+              ),
+            ),
+            SelectionChangeType.placeCaret,
+            SelectionReason.userInteraction,
+          ));
+        }
         return;
       }
     }

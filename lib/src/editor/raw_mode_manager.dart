@@ -56,9 +56,9 @@ class RawModeManager {
         preVisualTexts[id] = node.text.toPlainText();
       }
     }
-
     // Batch ALL blur and focus requests in a single execute
     final requests = <EditRequest>[];
+    final convertedNonTextNodeIds = <String>{};
 
     for (final id in toBlur) {
       final node = editorState.document.getNodeById(id);
@@ -70,7 +70,16 @@ class RawModeManager {
     for (final id in toFocus) {
       final node = editorState.document.getNodeById(id);
       if (node == null) continue;
-      if (node is! TextNode) continue;
+
+      if (node is! TextNode) {
+        // Non-TextNode block (e.g., HorizontalRuleNode):
+        // defer entire conversion to post-frame callback to avoid
+        // sync IME serialization on mismatched position type
+        final meta = MarkdownNodeMetadata.fromNode(node);
+        if (meta.isRawMode) continue;
+        convertedNonTextNodeIds.add(id);
+        continue;
+      }
 
       final meta = MarkdownNodeMetadata.fromNode(node);
       if (meta.isRawMode) continue;
@@ -91,94 +100,108 @@ class RawModeManager {
       ));
     }
 
-    if (requests.isEmpty) return;
-    editorState.editor.execute(requests);
+    if (requests.isNotEmpty) {
+      editorState.editor.execute(requests);
 
-    // Remap selection for all affected nodes
-    final base = _remapPosition(sel.base, toBlur, toFocus, preVisualTexts);
-    final extent = _remapPosition(sel.extent, toBlur, toFocus, preVisualTexts);
+      // Remap selection for all affected nodes
+      final base = _remapPosition(sel.base, toBlur, toFocus, preVisualTexts);
+      final extent = _remapPosition(sel.extent, toBlur, toFocus, preVisualTexts);
 
-    // Expand selection to include markers in focused nodes
-    DocumentPosition newBase = base;
-    DocumentPosition newExtent = extent;
+      // Expand selection to include markers in focused nodes
+      DocumentPosition newBase = base;
+      DocumentPosition newExtent = extent;
 
-    if (base.nodeId == extent.nodeId && toFocus.contains(base.nodeId)) {
-      // Single node: expand both edges using range-based expander
-      final node = editorState.document.getNodeById(base.nodeId);
-      if (node is TextNode) {
+      void expandSingle() {
+        final node = editorState.document.getNodeById(base.nodeId);
+        if (node is! TextNode) return;
+        if (base.nodePosition is! TextNodePosition) return;
+        if (extent.nodePosition is! TextNodePosition) return;
         final meta = MarkdownNodeMetadata.fromNode(node);
         final raw = meta.rawMarkdown;
+
         final baseOffset = (base.nodePosition as TextNodePosition).offset;
         final extentOffset = (extent.nodePosition as TextNodePosition).offset;
+
         final visual = preVisualTexts[base.nodeId];
-        if (visual != null) {
-          final (newStart, newEnd) = expandSelectionToMarkers(
-            visual,
-            raw,
-            baseOffset,
-            extentOffset,
-          );
-          newBase = DocumentPosition(
-            nodeId: base.nodeId,
-            nodePosition: TextNodePosition(offset: newStart),
-          );
-          newExtent = DocumentPosition(
-            nodeId: extent.nodeId,
-            nodePosition: TextNodePosition(offset: newEnd),
-          );
-        }
+        if (visual == null) return;
+        final (newStart, newEnd) = expandSelectionToMarkers(
+          visual,
+          raw,
+          baseOffset,
+          extentOffset,
+        );
+        newBase = DocumentPosition(
+          nodeId: base.nodeId,
+          nodePosition: TextNodePosition(offset: newStart),
+        );
+        newExtent = DocumentPosition(
+          nodeId: extent.nodeId,
+          nodePosition: TextNodePosition(offset: newEnd),
+        );
       }
-    } else {
-      // Multi-node: expand each edge independently
-      // Direction is determined by document order, not by base/extent role,
-      // so that reversed selections (right→left) also expand correctly.
-      final baseIdx = editorState.document.getNodeIndexById(base.nodeId);
-      final extentIdx = editorState.document.getNodeIndexById(extent.nodeId);
-      final baseIsEarlier = baseIdx != -1 && extentIdx != -1 && baseIdx < extentIdx;
 
-      if (toFocus.contains(base.nodeId)) {
+      void expandBaseEdge(bool baseIsEarlier) {
         final node = editorState.document.getNodeById(base.nodeId);
-        if (node is TextNode) {
-          final meta = MarkdownNodeMetadata.fromNode(node);
-          final visual = preVisualTexts[base.nodeId];
-          if (visual != null) {
-            final offset = (base.nodePosition as TextNodePosition).offset;
-            final expanded = baseIsEarlier
-                ? expandStartEdge(visual, meta.rawMarkdown, offset)
-                : expandEndEdge(visual, meta.rawMarkdown, offset);
-            newBase = DocumentPosition(
-              nodeId: base.nodeId,
-              nodePosition: TextNodePosition(offset: expanded),
-            );
-          }
-        }
+        if (node is! TextNode) return;
+        if (base.nodePosition is! TextNodePosition) return;
+        final meta = MarkdownNodeMetadata.fromNode(node);
+        final visual = preVisualTexts[base.nodeId];
+        if (visual == null) return;
+        final offset = (base.nodePosition as TextNodePosition).offset;
+        final expanded = baseIsEarlier
+            ? expandStartEdge(visual, meta.rawMarkdown, offset)
+            : expandEndEdge(visual, meta.rawMarkdown, offset);
+        newBase = DocumentPosition(
+          nodeId: base.nodeId,
+          nodePosition: TextNodePosition(offset: expanded),
+        );
       }
-      if (toFocus.contains(extent.nodeId)) {
+
+      void expandExtentEdge(bool baseIsEarlier) {
         final node = editorState.document.getNodeById(extent.nodeId);
-        if (node is TextNode) {
-          final meta = MarkdownNodeMetadata.fromNode(node);
-          final visual = preVisualTexts[extent.nodeId];
-          if (visual != null) {
-            final offset = (extent.nodePosition as TextNodePosition).offset;
-            final expanded = baseIsEarlier
-                ? expandEndEdge(visual, meta.rawMarkdown, offset)
-                : expandStartEdge(visual, meta.rawMarkdown, offset);
-            newExtent = DocumentPosition(
-              nodeId: extent.nodeId,
-              nodePosition: TextNodePosition(offset: expanded),
-            );
-          }
-        }
+        if (node is! TextNode) return;
+        if (extent.nodePosition is! TextNodePosition) return;
+        final meta = MarkdownNodeMetadata.fromNode(node);
+        final visual = preVisualTexts[extent.nodeId];
+        if (visual == null) return;
+        final offset = (extent.nodePosition as TextNodePosition).offset;
+        final expanded = baseIsEarlier
+            ? expandEndEdge(visual, meta.rawMarkdown, offset)
+            : expandStartEdge(visual, meta.rawMarkdown, offset);
+        newExtent = DocumentPosition(
+          nodeId: extent.nodeId,
+          nodePosition: TextNodePosition(offset: expanded),
+        );
       }
+
+      if (base.nodeId == extent.nodeId && toFocus.contains(base.nodeId)) {
+        expandSingle();
+      } else {
+        final baseIdx = editorState.document.getNodeIndexById(base.nodeId);
+        final extentIdx = editorState.document.getNodeIndexById(extent.nodeId);
+        final baseIsEarlier = baseIdx != -1 && extentIdx != -1 && baseIdx < extentIdx;
+
+        if (toFocus.contains(base.nodeId)) expandBaseEdge(baseIsEarlier);
+        if (toFocus.contains(extent.nodeId)) expandExtentEdge(baseIsEarlier);
+      }
+
+      final DocumentSelection finalSel;
+      if (identical(newBase, base) && identical(newExtent, extent)) {
+        finalSel = DocumentSelection(base: base, extent: extent);
+      } else {
+        finalSel = DocumentSelection(base: newBase, extent: newExtent);
+      }
+      editorState.composer.setSelectionWithReason(finalSel);
     }
 
-    final DocumentSelection finalSel;
-    if (identical(newBase, base) && identical(newExtent, extent)) {
-      finalSel = DocumentSelection(base: base, extent: extent);
-    } else {
-      finalSel = DocumentSelection(base: newBase, extent: newExtent);
+    if (convertedNonTextNodeIds.isNotEmpty) {
+      // Defer entire conversion to after widget tree rebuild,
+      // so the new text component exists before we set TextNodePosition
+      final capturedIds = Set<String>.from(convertedNonTextNodeIds);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _convertDeferredNonTextNodes(capturedIds);
+      });
     }
-    editorState.composer.setSelectionWithReason(finalSel);
   }
 
   DocumentPosition _remapPosition(
@@ -212,6 +235,49 @@ class RawModeManager {
     }
 
     return pos;
+  }
+
+  void _convertDeferredNonTextNodes(Set<String> nodeIds) {
+    final requests = <EditRequest>[];
+    final sel = editorState.composer.selection;
+
+    for (final id in nodeIds) {
+      final node = editorState.document.getNodeById(id);
+      if (node == null || node is TextNode) continue;
+      final meta = MarkdownNodeMetadata.fromNode(node);
+      if (meta.isRawMode) continue;
+      final formatted = applyInlineFormatting(meta.rawMarkdown);
+      requests.add(ReplaceNodeRequest(
+        existingNodeId: id,
+        newNode: ParagraphNode(
+          id: id,
+          text: formatted,
+          metadata: meta.copyWith(isRawMode: true).toMap(),
+        ),
+      ));
+
+      // Include selection fix in the same transaction, so the presenter
+      // sees the correct position type synchronously after execute
+      if (sel != null) {
+        final baseIsHere = sel.base.nodeId == id;
+        final extentIsHere = sel.extent.nodeId == id;
+        if (baseIsHere || extentIsHere) {
+          final textPos = DocumentPosition(
+            nodeId: id,
+            nodePosition: const TextNodePosition(offset: 0),
+          );
+          final base = baseIsHere ? textPos : sel.base;
+          final extent = extentIsHere ? textPos : sel.extent;
+          requests.add(ChangeSelectionRequest(
+            DocumentSelection(base: base, extent: extent),
+            SelectionChangeType.placeCaret,
+            SelectionReason.userInteraction,
+          ));
+        }
+      }
+    }
+    if (requests.isEmpty) return;
+    editorState.editor.execute(requests);
   }
 
   List<EditRequest> _onBlur(DocumentNode node) {
