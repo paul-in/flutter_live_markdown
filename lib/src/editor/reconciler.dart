@@ -54,6 +54,15 @@ class MarkdownReconciler extends EditReaction {
       }
     }
 
+    // Collect IDs of all nodes changed in this edit
+    final changedNodeIds = <String>{};
+    for (final editEvent in changeList) {
+      if (editEvent is! DocumentEdit) continue;
+      final change = editEvent.change;
+      if (change is! NodeDocumentChange) continue;
+      changedNodeIds.add(change.nodeId);
+    }
+
     // Pass 2: detect paste events — collect candidate node IDs
     // that need group-based markdown parsing
     final affectedIds = <String>{};
@@ -81,6 +90,7 @@ class MarkdownReconciler extends EditReaction {
       if (rawMd.isEmpty && node.text.toPlainText().isNotEmpty) {
         affectedIds.add(node.id);
         hasPasteEvent = true;
+        continue;
       }
     }
 
@@ -100,6 +110,19 @@ class MarkdownReconciler extends EditReaction {
           group.add(n);
         } else if (inGroup) {
           break;
+        }
+      }
+
+      // Include the preceding node if it was changed in this edit,
+      // which happens when the first pasted line was merged into
+      // the existing formatted node (paste handler)
+      if (group.isNotEmpty && groupStartIndex > 0) {
+        final prevNode = document.getNodeAt(groupStartIndex - 1);
+        if (prevNode is TextNode &&
+            changedNodeIds.contains(prevNode.id) &&
+            prevNode.metadata['isRawMode'] != true) {
+          group.insert(0, prevNode);
+          groupStartIndex -= 1;
         }
       }
 
@@ -212,7 +235,7 @@ class MarkdownReconciler extends EditReaction {
     final meta = Map<String, dynamic>.from(base.metadata);
     meta['rawMarkdown'] = block.text;
     meta['isRawMode'] = false;
-    return ParagraphNode(id: base.id, text: base.text, metadata: meta);
+    return base.copyTextNodeWith(metadata: meta);
   }
 
   DocumentNode _createRawModeNode(MarkdownBlock block) {
@@ -224,7 +247,7 @@ class MarkdownReconciler extends EditReaction {
     meta['rawMarkdown'] = block.text;
     meta['isRawMode'] = true;
 
-    return ParagraphNode(id: base.id, text: formatted, metadata: meta);
+    return base.copyTextNodeWith(text: formatted, metadata: meta);
   }
 
   void _preserveSelectionOnSplit(
