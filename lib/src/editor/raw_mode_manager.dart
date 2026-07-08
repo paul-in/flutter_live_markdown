@@ -27,6 +27,14 @@ class RawModeManager {
     }
   }
 
+  void beginApplyingFormatting() {
+    _isApplyingFormatting = true;
+  }
+
+  void endApplyingFormatting() {
+    _isApplyingFormatting = false;
+  }
+
   void onSelectionChange() {
     if (deferToPointerUp && _isPointerDown) return;
     _processSelectionChange();
@@ -82,7 +90,16 @@ class RawModeManager {
       }
 
       final meta = MarkdownNodeMetadata.fromNode(node);
-      if (meta.isRawMode) continue;
+      if (meta.isRawMode) {
+        // New raw-mode node from split (InsertNewlineAtCaretRequest inherits metadata).
+        // Fix stale rawMarkdown in-place — _updateInlineFormatting post-frame will
+        // recreate the AttributedText with applyInlineFormatting.
+        final currentText = node.text.toPlainText();
+        if (meta.rawMarkdown != currentText) {
+          node.metadata['rawMarkdown'] = currentText;
+        }
+        continue;
+      }
 
       final formatted = applyInlineFormatting(meta.rawMarkdown);
       final blockType = node.metadata[NodeMetadata.blockType];
@@ -294,7 +311,7 @@ class RawModeManager {
       bool isBlockquote = parsed.isBlockquote;
 
       final doc = deserializeMarkdownToDocument(innerRaw);
-      final newMeta = meta.copyWith(isRawMode: false);
+      final newMeta = meta.copyWith(rawMarkdown: raw, isRawMode: false);
 
       if (wasHR || innerRaw.trim() == '---' || innerRaw.trim() == '***' || innerRaw.trim() == '___') {
         return [

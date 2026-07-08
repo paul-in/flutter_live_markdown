@@ -9,6 +9,7 @@ import '../parsing/markdown_splitter.dart';
 import '../rendering/styles.dart';
 import 'editor_state.dart';
 import 'raw_mode_manager.dart';
+import 'unfold_before_action.dart';
 
 ExecutionInstruction _customEnterHandler({
   required SuperEditorContext editContext,
@@ -122,41 +123,47 @@ ExecutionInstruction _customEnterHandler({
     return ExecutionInstruction.haltExecution;
   }
 
-  // Case 3: lists with prefix → default split, post-frame adds prefix
-  final prefix = btd.detectContinuationPrefix(text);
-  if (prefix != null) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final sel = editContext.composer.selection;
-      if (sel == null) return;
-      final newNode = editContext.document.getNodeById(sel.extent.nodeId);
-      if (newNode is! TextNode) return;
-      if (newNode.text.toPlainText().isNotEmpty) return;
-      editContext.editor.execute([
-        const ClearComposingRegionRequest(),
-        ReplaceNodeRequest(
-          existingNodeId: newNode.id,
-          newNode: ParagraphNode(
-            id: newNode.id,
-            text: applyInlineFormatting(prefix),
-            metadata: {...newNode.metadata, 'rawMarkdown': prefix, 'isRawMode': true},
-          ),
-        ),
-        ChangeSelectionRequest(
-          DocumentSelection.collapsed(
-            position: DocumentPosition(
-              nodeId: newNode.id,
-              nodePosition: TextNodePosition(offset: prefix.length),
-            ),
-          ),
-          SelectionChangeType.placeCaret,
-          SelectionReason.userInteraction,
-        ),
-      ]);
-    });
-  }
+  // Case 3 & 4: standard blocks (headings, paragraphs) + lists + blockquotes
+  // Handle split OURSELVES → no InsertNewlineAtCaretRequest → no recursive _processSelectionChange → no crash
+  final listPrefix = btd.detectContinuationPrefix(text);
+  final leftText = text.substring(0, offset);
+  final rightText = text.substring(offset);
+  final newId = Editor.createNodeId();
 
-  // Case 4: standard blocks → let default handler split
-  return ExecutionInstruction.continueExecution;
+  editContext.editor.execute([
+    const ClearComposingRegionRequest(),
+    ReplaceNodeRequest(
+      existingNodeId: node.id,
+      newNode: ParagraphNode(
+        id: node.id,
+        text: applyInlineFormatting(leftText),
+        metadata: {...node.metadata, 'rawMarkdown': leftText, 'isRawMode': true},
+      ),
+    ),
+    InsertNodeAfterNodeRequest(
+      existingNodeId: node.id,
+      newNode: ParagraphNode(
+        id: newId,
+        text: applyInlineFormatting(listPrefix != null ? '$listPrefix$rightText' : rightText),
+        metadata: {
+          ...node.metadata,
+          'rawMarkdown': listPrefix != null ? '$listPrefix$rightText' : rightText,
+          'isRawMode': true,
+        },
+      ),
+    ),
+    ChangeSelectionRequest(
+      DocumentSelection.collapsed(
+        position: DocumentPosition(
+          nodeId: newId,
+          nodePosition: TextNodePosition(offset: listPrefix != null ? listPrefix.length : 0),
+        ),
+      ),
+      SelectionChangeType.placeCaret,
+      SelectionReason.userInteraction,
+    ),
+  ]);
+  return ExecutionInstruction.haltExecution;
 }
 
 class LiveMarkdownEditor extends StatefulWidget {
@@ -255,6 +262,8 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
         editor: _editorState.editor,
         scrollController: _editorState.scrollController,
         keyboardActions: [
+          ({required SuperEditorContext editContext, required KeyEvent keyEvent}) =>
+            unfoldBeforeAction(editContext: editContext, keyEvent: keyEvent, rawModeManager: _rawModeManager),
           ({required SuperEditorContext editContext, required KeyEvent keyEvent}) =>
             _customEnterHandler(editContext: editContext, keyEvent: keyEvent, onDocumentChange: _onDocumentChange),
           ...defaultKeyboardActions,
