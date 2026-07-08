@@ -1,107 +1,216 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_live_markdown/live_markdown.dart';
 
-void main() {
-  runApp(const MyApp());
-}
+const _initial = '# Welcome\n\nThis is **bold** and *italic*\n\n> A blockquote\n\nPlain paragraph with `code` inline\n\n---\n\nA [link](https://example.com)';
+
+void main() => runApp(const MyApp());
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Live Markdown',
       theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple)),
-      home: const MyHomePage(title: 'Feature 1 — Display'),
+      home: const MyHomePage(),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-  final String title;
-
+  const MyHomePage({super.key});
   @override
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  late LiveMarkdownController _controller;
-  final TextEditingController _rawController = TextEditingController(
-    text: '# Welcome\n\nThis is **bold** and *italic*\n\n> A blockquote\n\nPlain paragraph with `code` inline\n\n---\n\nA [link](https://example.com)',
-  );
+  late final LiveMarkdownController _ctrl;
+  final _scrollOffsetCtrl = TextEditingController();
+  final _replaceCtrl = TextEditingController();
+
+  int _changeCount = 0;
+  int _selCount = 0;
+  bool _isFocused = false;
+  String _extractedContent = '';
 
   @override
   void initState() {
     super.initState();
-    _controller = LiveMarkdownController(initialMarkdown: _rawController.text);
-    _controller.addListener(_onControllerChange);
+    _ctrl = LiveMarkdownController(initialMarkdown: _initial);
+    _ctrl.onChange = () => setState(() => _changeCount++);
+    _ctrl.onSelectionChange = () => setState(() => _selCount++);
+    _ctrl.onFocusChange = () => setState(() => _isFocused = !_isFocused);
   }
 
   @override
   void dispose() {
-    _controller.removeListener(_onControllerChange);
-    _controller.dispose();
-    _rawController.dispose();
+    _ctrl.dispose();
+    _scrollOffsetCtrl.dispose();
+    _replaceCtrl.dispose();
     super.dispose();
   }
 
-  void _onControllerChange() {
-    // Keep raw controller in sync with editor changes
-    if (_rawController.text != _controller.text) {
-      _rawController.text = _controller.text;
-    }
-  }
-
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Row(
-        children: [
-          Expanded(
-            child: Container(
+  Widget build(BuildContext context) => Scaffold(
+        body: Row(
+          children: [
+            Expanded(child: Padding(
               padding: const EdgeInsets.all(16),
-              child: LiveMarkdownEditor(controller: _controller),
-            ),
-          ),
-          Container(width: 1, color: Colors.grey.shade300),
-          Expanded(
-            child: Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  color: Colors.grey.shade100,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text("Raw Markdown", style: TextStyle(fontWeight: FontWeight.bold)),
-                      ElevatedButton.icon(
-                        onPressed: () => _controller.replaceContent(_rawController.text),
-                        icon: const Icon(Icons.sync),
-                        label: const Text("Apply =>"),
-                      ),
-                    ],
-                  ),
+              child: LiveMarkdownEditor(controller: _ctrl),
+            )),
+            Container(width: 1, color: Colors.grey.shade300),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSection('API'),
+                    const SizedBox(height: 8),
+                    _selectionInfo(),
+                    const SizedBox(height: 8),
+                    _actionButtons(),
+                    const SizedBox(height: 8),
+                    _scrollToField(),
+                    const SizedBox(height: 8),
+                    _replaceField(),
+                    const SizedBox(height: 8),
+                    _extractField(),
+                    const SizedBox(height: 8),
+                    _callbackInfo(),
+                  ],
                 ),
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    color: Colors.grey.shade50,
-                    child: TextField(
-                      controller: _rawController,
-                      maxLines: null,
-                      expands: true,
-                      style: const TextStyle(fontFamily: 'monospace', fontSize: 14),
-                      decoration: const InputDecoration(border: InputBorder.none),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
+          ],
+        ),
+      );
+
+  Widget _buildSection(String title) => Text(
+        title,
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey),
+      );
+
+  Widget _selectionInfo() => _infoRow(
+        'Selection',
+        '${_ctrl.selectionStart} – ${_ctrl.selectionEnd}',
+      );
+
+  Widget _actionButtons() => Wrap(
+        spacing: 8,
+        children: [
+          _btn('Undo', _ctrl.canUndo, () => _ctrl.undo()),
+          _btn('Redo', _ctrl.canRedo, () => _ctrl.redo()),
+          _btn('Blur', true, () => _ctrl.blur()),
+          _btn('Clear Sel', true, () => _ctrl.clearSelection()),
         ],
-      ),
-    );
-  }
+      );
+
+  Widget _scrollToField() => Row(
+        children: [
+          const SizedBox(width: 80, child: Text('Scroll to:', style: TextStyle(fontSize: 13))),
+          SizedBox(width: 80, child: TextField(
+            controller: _scrollOffsetCtrl,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(isDense: true, border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4)),
+          )),
+          const SizedBox(width: 8),
+          _btn('Go', true, () {
+            final v = int.tryParse(_scrollOffsetCtrl.text);
+            if (v != null) _ctrl.scrollTo(v);
+          }),
+        ],
+      );
+
+  Widget _replaceField() => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const SizedBox(width: 80, child: Text('Replace all:', style: TextStyle(fontSize: 13))),
+              Expanded(
+                child: TextField(
+                  controller: _replaceCtrl,
+                  maxLines: 3,
+                  style: const TextStyle(fontSize: 13),
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              _btn('Set', true, () {
+                if (_replaceCtrl.text.isNotEmpty) {
+                  _ctrl.replaceContent(_replaceCtrl.text);
+                  _replaceCtrl.clear();
+                }
+              }),
+            ],
+          ),
+          const SizedBox(height: 4),
+        ],
+      );
+
+  Widget _extractField() => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('Extract selection:', style: TextStyle(fontSize: 13)),
+              const SizedBox(width: 12),
+              _btn('Extract', true, () {
+                int f = _ctrl.selectionStart;
+                int t = _ctrl.selectionEnd;
+                if (f > t) (f, t) = (t, f);
+                _extractedContent = f != t ? _ctrl.getContentBetween(f, t) : '';
+                setState(() {});
+              }),
+            ],
+          ),
+          const SizedBox(height: 4),
+          _extractedContent.isNotEmpty
+              ? Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(_extractedContent, style: const TextStyle(fontSize: 12, fontFamily: 'monospace', color: Colors.grey)),
+                )
+              : const SizedBox.shrink(),
+        ],
+      );
+
+  Widget _callbackInfo() => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Callbacks', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.grey.shade600)),
+          const SizedBox(height: 4),
+          _infoRow('onChange', '$_changeCount events'),
+          _infoRow('onSelectionChange', '$_selCount events'),
+          _infoRow('onFocusChange', _isFocused ? '✓ focused' : '✗ not focused'),
+        ],
+      );
+
+  Widget _infoRow(String label, String value) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 1),
+        child: Row(
+          children: [
+            SizedBox(width: 140, child: Text(label, style: const TextStyle(fontSize: 13))),
+            Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+          ],
+        ),
+      );
+
+  Widget _btn(String label, bool enabled, VoidCallback onPressed) => SizedBox(
+        height: 30,
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 10)),
+          onPressed: enabled ? onPressed : null,
+          child: Text(label, style: const TextStyle(fontSize: 12)),
+        ),
+      );
 }
