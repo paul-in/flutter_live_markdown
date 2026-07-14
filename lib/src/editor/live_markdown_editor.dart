@@ -6,6 +6,8 @@ import '../api/live_markdown_controller.dart';
 import '../parsing/block_type_detector.dart' as btd;
 import '../parsing/inline_formatter.dart';
 import '../parsing/markdown_splitter.dart';
+import '../rendering/image_wrapper_builder.dart';
+import '../rendering/table_wrapper_builder.dart';
 import '../rendering/styles.dart';
 import 'editor_state.dart';
 import 'raw_mode_manager.dart';
@@ -278,9 +280,9 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
           ...defaultKeyboardActions,
         ],
         componentBuilders: [
+          TableWrapperBuilder(_editorState.document, defaultComponentBuilders),
+          ImageWrapperBuilder(_editorState.document, defaultComponentBuilders),
           const BlockquoteComponentBuilder(),
-          const ImageComponentBuilder(),
-          const MarkdownTableComponentBuilder(),
           ...defaultComponentBuilders,
         ],
         stylesheet: customStylesheet(defaultStylesheet),

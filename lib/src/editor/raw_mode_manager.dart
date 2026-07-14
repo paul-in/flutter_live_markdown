@@ -389,6 +389,35 @@ class RawModeManager {
         ];
       }
 
+      if (parsedNode is ImageNode) {
+        itemMetadata['isImage'] = true;
+        itemMetadata['imageUrl'] = parsedNode.imageUrl;
+        return [
+          ReplaceNodeRequest(
+            existingNodeId: node.id,
+            newNode: ParagraphNode(
+              id: node.id,
+              text: AttributedText(raw),
+              metadata: itemMetadata,
+            ),
+          ),
+        ];
+      }
+
+      if (parsedNode is TableBlockNode) {
+        itemMetadata['isTable'] = true;
+        return [
+          ReplaceNodeRequest(
+            existingNodeId: node.id,
+            newNode: ParagraphNode(
+              id: node.id,
+              text: AttributedText(raw),
+              metadata: itemMetadata,
+            ),
+          ),
+        ];
+      }
+
       if (parsedNode is ParagraphNode) {
         return [
           ReplaceNodeRequest(
