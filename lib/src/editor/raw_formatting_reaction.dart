@@ -27,14 +27,14 @@ class RawFormattingReaction extends EditReaction {
       final raw = node.text.toPlainText();
       final formatted = applyInlineFormatting(raw);
 
-      // Skip if spans already match (no-op)
-      if (formatted == node.text) continue;
-
       // Re-detect block type (#, >, etc.) — preserve blockquote attribution
       final parsed = parseBlockquote(raw);
       final blockType = parsed.isBlockquote
           ? blockquoteAttribution
           : detectBlockType(parsed.text);
+
+      // Skip only if spans AND blockType already match
+      if (formatted == node.text && blockType == node.metadata[NodeMetadata.blockType]) continue;
 
       final meta = MarkdownNodeMetadata.fromNode(node);
       final newMeta = meta.copyWith(rawMarkdown: raw, isRawMode: true).toMap();
