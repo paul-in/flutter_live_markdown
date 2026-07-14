@@ -5,7 +5,10 @@ import '../model/markdown_block.dart';
 import '../model/markdown_node_metadata.dart';
 import '../model/markdown_utils.dart';
 import '../parsing/markdown_splitter.dart';
+import 'merge_rapid_markdown_typing_policy.dart';
+import 'raw_formatting_reaction.dart';
 import 'reconciler.dart';
+import 'refresh_inline_formatting.dart';
 
 DocumentNode createNodeForBlock(MarkdownBlock block) {
   final nodeId = Editor.createNodeId();
@@ -92,26 +95,34 @@ class EditorState {
   late FocusNode editorFocusNode;
   late ScrollController scrollController;
 
+  bool isUndoing = false;
+
   void initializeFromMarkdown(String raw, {ScrollController? reuseScrollController}) {
-    document = MutableDocument(nodes: []);
     composer = MutableDocumentComposer();
     editorFocusNode = FocusNode();
     scrollController = reuseScrollController ?? ScrollController();
 
     final blocks = splitMarkdownIntoBlocks(raw);
-    for (final block in blocks) {
-      document.add(createNodeForBlock(block));
-    }
+    document = MutableDocument(nodes: blocks.map(createNodeForBlock).toList());
 
     editor = Editor(
       editables: {
         Editor.documentKey: document,
         Editor.composerKey: composer,
       },
-      requestHandlers: [...defaultRequestHandlers],
+      requestHandlers: [
+        refreshInlineFormattingRequestHandler,
+        ...defaultRequestHandlers,
+      ],
       reactionPipeline: [
         MarkdownReconciler(createNodeForBlock: createNodeForBlock),
+        RawFormattingReaction(),
       ],
+      historyGroupingPolicy: HistoryGroupingPolicyList([
+        mergeRepeatSelectionChangesPolicy,
+        mergeRapidTextInputPolicy,
+        const MergeRapidMarkdownTypingPolicy(),
+      ]),
       isHistoryEnabled: true,
     );
   }

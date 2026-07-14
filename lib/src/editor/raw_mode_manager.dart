@@ -10,10 +10,15 @@ import 'editor_state.dart';
 
 class RawModeManager {
   final EditorState editorState;
-  final Set<String> _focusedNodeIds = {};
-  bool _isApplyingFormatting = false;
-  bool _formattingScheduled = false;
   bool _isPointerDown = false;
+
+  Set<String> get _focusedNodeIds {
+    final ids = <String>{};
+    for (final n in editorState.document) {
+      if (n.metadata['isRawMode'] == true) ids.add(n.id);
+    }
+    return ids;
+  }
 
   bool deferToPointerUp;
   bool cursorInsideMarkers;
@@ -32,20 +37,14 @@ class RawModeManager {
     }
   }
 
-  void beginApplyingFormatting() {
-    _isApplyingFormatting = true;
-  }
-
-  void endApplyingFormatting() {
-    _isApplyingFormatting = false;
-  }
-
   void onSelectionChange() {
     if (deferToPointerUp && _isPointerDown) return;
     _processSelectionChange();
   }
 
   void _processSelectionChange() {
+    if (editorState.isUndoing) return;
+
     final sel = editorState.composer.selection;
     if (sel == null) return;
 
@@ -57,9 +56,6 @@ class RawModeManager {
     final toFocus = nextIds.difference(_focusedNodeIds);
 
     if (toBlur.isEmpty && toFocus.isEmpty) return;
-
-    _focusedNodeIds.clear();
-    _focusedNodeIds.addAll(nextIds);
 
     // Capture visual texts BEFORE execute for later offset remapping
     final Map<String, String> preVisualTexts = {};
@@ -97,8 +93,8 @@ class RawModeManager {
       final meta = MarkdownNodeMetadata.fromNode(node);
       if (meta.isRawMode) {
         // New raw-mode node from split (InsertNewlineAtCaretRequest inherits metadata).
-        // Fix stale rawMarkdown in-place — _updateInlineFormatting post-frame will
-        // recreate the AttributedText with applyInlineFormatting.
+        // Fix stale rawMarkdown in-place; RawFormattingReaction will recreate the
+        // AttributedText with applyInlineFormatting.
         final currentText = node.text.toPlainText();
         if (meta.rawMarkdown != currentText) {
           node.metadata['rawMarkdown'] = currentText;
@@ -304,8 +300,10 @@ class RawModeManager {
 
   List<EditRequest> _onBlur(DocumentNode node) {
     if (node is TextNode) {
-      final raw = node.text.toPlainText();
       final meta = MarkdownNodeMetadata.fromNode(node);
+      if (!meta.isRawMode) return [];
+
+      final raw = node.text.toPlainText();
 
       // Check if this was originally a HorizontalRuleNode
       final wasHR = node is! HorizontalRuleNode && 
@@ -442,61 +440,4 @@ class RawModeManager {
   }
 
   void dispose() {}
-
-  void onDocumentChange(DocumentChangeLog changeLog) {
-    if (_isApplyingFormatting) return;
-    if (_focusedNodeIds.isEmpty) return;
-
-    _scheduleFormattingUpdate();
-  }
-
-  void _scheduleFormattingUpdate() {
-    if (_formattingScheduled) return;
-    _formattingScheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _formattingScheduled = false;
-      if (_isApplyingFormatting) return;
-      for (final id in _focusedNodeIds) {
-        _updateInlineFormatting(id);
-      }
-    });
-  }
-
-  void _updateInlineFormatting(String nodeId) {
-    final node = editorState.document.getNodeById(nodeId);
-    if (node == null) return;
-
-    final meta = MarkdownNodeMetadata.fromNode(node);
-    if (!meta.isRawMode) return;
-    if (node is! TextNode) return;
-
-    final raw = node.text.toPlainText();
-    final formatted = applyInlineFormatting(raw);
-    final newMeta = meta.copyWith(rawMarkdown: raw);
-
-    // Re-parse to detect block type changes (#, >, etc.)
-    final parsed = parseBlockquote(raw);
-    final blockType = detectBlockType(parsed.text);
-
-    final newNodeMeta = newMeta.toMap();
-    if (blockType != null) {
-      newNodeMeta[NodeMetadata.blockType] = blockType;
-    }
-
-    _isApplyingFormatting = true;
-    try {
-      editorState.editor.execute([
-        ReplaceNodeRequest(
-          existingNodeId: nodeId,
-          newNode: ParagraphNode(
-            id: nodeId,
-            text: formatted,
-            metadata: newNodeMeta,
-          ),
-        ),
-      ]);
-    } finally {
-      _isApplyingFormatting = false;
-    }
-  }
 }

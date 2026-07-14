@@ -4,12 +4,10 @@ import 'package:super_editor/super_editor.dart';
 import '../model/markdown_node_metadata.dart';
 import '../model/offset_mapper.dart';
 import '../parsing/inline_formatter.dart';
-import 'raw_mode_manager.dart';
 
 ExecutionInstruction unfoldBeforeAction({
   required SuperEditorContext editContext,
   required KeyEvent keyEvent,
-  required RawModeManager rawModeManager,
 }) {
   if (keyEvent is! KeyDownEvent && keyEvent is! KeyRepeatEvent) {
     return ExecutionInstruction.continueExecution;
@@ -116,9 +114,7 @@ ExecutionInstruction unfoldBeforeAction({
     ));
   }
 
-  rawModeManager.beginApplyingFormatting();
   editContext.editor.execute(requests);
-  rawModeManager.endApplyingFormatting();
 
   return ExecutionInstruction.continueExecution;
 }

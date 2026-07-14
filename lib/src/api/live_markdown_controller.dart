@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:super_editor/super_editor.dart';
 
 import '../editor/editor_state.dart';
@@ -160,10 +160,26 @@ class LiveMarkdownController extends ChangeNotifier {
   }
 
   /// Undoes the last undoable transaction.
-  void undo() => _editorState?.editor.undo();
+  void undo() {
+    final es = _editorState;
+    if (es == null) return;
+    es.isUndoing = true;
+    es.editor.undo();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      es.isUndoing = false;
+    });
+  }
 
   /// Redoes the last undone transaction.
-  void redo() => _editorState?.editor.redo();
+  void redo() {
+    final es = _editorState;
+    if (es == null) return;
+    es.isUndoing = true;
+    es.editor.redo();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      es.isUndoing = false;
+    });
+  }
 
   /// Controls whether the software keyboard should be shown.
   /// Requires a widget rebuild to take effect — stubbed until the widget infrastructure is ready.

@@ -14,7 +14,6 @@ import 'unfold_before_action.dart';
 ExecutionInstruction _customEnterHandler({
   required SuperEditorContext editContext,
   required KeyEvent keyEvent,
-  required void Function(DocumentChangeLog) onDocumentChange,
 }) {
   if (keyEvent is! KeyDownEvent && keyEvent is! KeyRepeatEvent) {
     return ExecutionInstruction.continueExecution;
@@ -95,31 +94,26 @@ ExecutionInstruction _customEnterHandler({
       return ExecutionInstruction.haltExecution;
     }
 
-    // ≤1 block: safe continuation via direct node modification (no reconciler → no IME crash)
-    final newNode = node.copyTextNodeWith(
-      text: AttributedText(newText),
-      metadata: {...node.metadata, 'rawMarkdown': newText, 'isRawMode': true},
-    );
-    final doc = editContext.document;
-    if (doc is MutableDocument) {
-      doc.replaceNodeById(node.id, newNode);
-      onDocumentChange(DocumentChangeLog([]));
-    }
-
-    final newOffset = offset + insertion.length;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final comp = editContext.composer;
-      if (comp is MutableDocumentComposer) {
-        comp.setSelectionWithReason(
-          DocumentSelection.collapsed(
-            position: DocumentPosition(
-              nodeId: node.id,
-              nodePosition: TextNodePosition(offset: newOffset),
-            ),
+    // ≤1 block: safe continuation via editor.execute
+    editContext.editor.execute([
+      ReplaceNodeRequest(
+        existingNodeId: node.id,
+        newNode: node.copyTextNodeWith(
+          text: applyInlineFormatting(newText),
+          metadata: {...node.metadata, 'rawMarkdown': newText, 'isRawMode': true},
+        ),
+      ),
+      ChangeSelectionRequest(
+        DocumentSelection.collapsed(
+          position: DocumentPosition(
+            nodeId: node.id,
+            nodePosition: TextNodePosition(offset: offset + insertion.length),
           ),
-        );
-      }
-    });
+        ),
+        SelectionChangeType.placeCaret,
+        SelectionReason.userInteraction,
+      ),
+    ]);
     return ExecutionInstruction.haltExecution;
   }
 
@@ -254,8 +248,6 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
   }
 
   void _onDocumentChange(DocumentChangeLog changeLog) {
-    _rawModeManager.onDocumentChange(changeLog);
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final markdown = _editorState.document
@@ -280,9 +272,9 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
         scrollController: _editorState.scrollController,
         keyboardActions: [
           ({required SuperEditorContext editContext, required KeyEvent keyEvent}) =>
-            unfoldBeforeAction(editContext: editContext, keyEvent: keyEvent, rawModeManager: _rawModeManager),
+            unfoldBeforeAction(editContext: editContext, keyEvent: keyEvent),
           ({required SuperEditorContext editContext, required KeyEvent keyEvent}) =>
-            _customEnterHandler(editContext: editContext, keyEvent: keyEvent, onDocumentChange: _onDocumentChange),
+            _customEnterHandler(editContext: editContext, keyEvent: keyEvent),
           ...defaultKeyboardActions,
         ],
         componentBuilders: [
