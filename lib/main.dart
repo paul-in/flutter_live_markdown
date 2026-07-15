@@ -27,6 +27,7 @@ class _MyHomePageState extends State<MyHomePage> {
   late final LiveMarkdownController _ctrl;
   final _scrollOffsetCtrl = TextEditingController();
   final _replaceCtrl = TextEditingController();
+  final _replaceCursorCtrl = TextEditingController(text: '0');
 
   int _changeCount = 0;
   int _selCount = 0;
@@ -59,6 +60,7 @@ class _MyHomePageState extends State<MyHomePage> {
     _ctrl.dispose();
     _scrollOffsetCtrl.dispose();
     _replaceCtrl.dispose();
+    _replaceCursorCtrl.dispose();
     super.dispose();
   }
 
@@ -199,13 +201,31 @@ class _MyHomePageState extends State<MyHomePage> {
               const SizedBox(width: 8),
               _btn('Set', true, () {
                 if (_replaceCtrl.text.isNotEmpty) {
-                  _ctrl.replaceContent(_replaceCtrl.text);
+                  final cursor = int.tryParse(_replaceCursorCtrl.text);
+                  _ctrl.replaceContent(_replaceCtrl.text, cursor: cursor);
                   _replaceCtrl.clear();
                 }
               }),
             ],
           ),
           const SizedBox(height: 4),
+          Row(
+            children: [
+              const SizedBox(width: 80, child: Text('Cursor offset:', style: TextStyle(fontSize: 13))),
+              SizedBox(
+                width: 80,
+                child: TextField(
+                  controller: _replaceCursorCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       );
 

@@ -2,6 +2,8 @@ import 'package:flutter/widgets.dart';
 import 'package:super_editor/super_editor.dart';
 
 import '../editor/editor_state.dart';
+import '../model/markdown_node_metadata.dart';
+import '../parsing/inline_formatter.dart';
 
 
 // Contains Public API
@@ -10,6 +12,15 @@ class LiveMarkdownController extends ChangeNotifier {
   EditorState? _editorState;
 
   String get text => _text;
+
+  int? _pendingCursor;
+
+  /// Internal. Consumes and returns the pending cursor value, if any.
+  int? consumePendingCursor() {
+    final c = _pendingCursor;
+    _pendingCursor = null;
+    return c;
+  }
 
   VoidCallback? onChange;
   VoidCallback? onSelectionChange;
@@ -49,11 +60,82 @@ class LiveMarkdownController extends ChangeNotifier {
   // ── Public API ──────────────────────────────────────────
 
   /// Replaces all content and reinitializes the editor.
-  void replaceContent(String markdown) {
+  ///
+  /// If [cursor] is provided, places the cursor at that global
+  /// raw-markdown offset after the reload.
+  void replaceContent(String markdown, {int? cursor}) {
     _text = markdown;
+    _pendingCursor = cursor;
     onReloadRequested?.call();
     notifyListeners();
     onChange?.call();
+  }
+
+  void setCursorAfterReload(int globalOffset) {
+    final es = _editorState;
+    if (es == null) return;
+    int accumulated = 0;
+    for (final node in es.document) {
+      final raw = node.metadata['rawMarkdown'] as String? ?? '';
+      final rawLen = raw.length;
+      if (globalOffset <= accumulated + rawLen) {
+        final localRawOffset = (globalOffset - accumulated).clamp(0, rawLen);
+        if (node is TextNode) {
+          final meta = MarkdownNodeMetadata.fromNode(node);
+          if (!meta.isRawMode) {
+            _focusNodeRaw(node, localRawOffset);
+          } else {
+            es.composer.setSelectionWithReason(
+              DocumentSelection.collapsed(
+                position: DocumentPosition(
+                  nodeId: node.id,
+                  nodePosition: TextNodePosition(offset: localRawOffset),
+                ),
+              ),
+            );
+          }
+        }
+        return;
+      }
+      accumulated += rawLen + 2;
+    }
+  }
+
+  void _focusNodeRaw(TextNode node, int targetRawOffset) {
+    final es = _editorState;
+    if (es == null) return;
+
+    final meta = MarkdownNodeMetadata.fromNode(node);
+    final formatted = applyInlineFormatting(meta.rawMarkdown);
+    final newMeta = meta.copyWith(isRawMode: true);
+    final newMetaMap = newMeta.toMap();
+    final blockType = node.metadata[NodeMetadata.blockType];
+    if (blockType != null) newMetaMap[NodeMetadata.blockType] = blockType;
+
+    es.editor.execute([
+      ReplaceNodeRequest(
+        existingNodeId: node.id,
+        newNode: ParagraphNode(
+          id: node.id,
+          text: formatted,
+          metadata: newMetaMap,
+        ),
+      ),
+    ]);
+
+    final updatedNode = es.document.getNodeById(node.id);
+    if (updatedNode is TextNode) {
+      es.composer.setSelectionWithReason(
+        DocumentSelection.collapsed(
+          position: DocumentPosition(
+            nodeId: node.id,
+            nodePosition: TextNodePosition(
+              offset: targetRawOffset.clamp(0, meta.rawMarkdown.length),
+            ),
+          ),
+        ),
+      );
+    }
   }
 
   /// Internal: sync _text from the editor without reinitializing.

@@ -247,6 +247,13 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
     );
     _editorState.composer.selectionNotifier.addListener(_rawModeManager.onSelectionChange);
     setState(() {});
+    final pendingCursor = widget.controller.consumePendingCursor();
+    if (pendingCursor != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        widget.controller.setCursorAfterReload(pendingCursor);
+      });
+    }
   }
 
   void _onDocumentChange(DocumentChangeLog changeLog) {
