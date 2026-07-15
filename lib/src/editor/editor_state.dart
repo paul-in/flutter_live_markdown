@@ -8,6 +8,7 @@ import '../parsing/markdown_splitter.dart';
 import 'merge_rapid_markdown_typing_policy.dart';
 import 'raw_formatting_reaction.dart';
 import 'reconciler.dart';
+import 'markdown_paste_command.dart';
 import 'refresh_inline_formatting.dart';
 
 DocumentNode createNodeForBlock(MarkdownBlock block) {
@@ -88,6 +89,16 @@ DocumentNode createNodeForBlock(MarkdownBlock block) {
   return ParagraphNode(id: nodeId, text: text, metadata: newMetadata);
 }
 
+EditRequestHandler markdownPasteHandler = (editor, request) {
+  if (request is PasteEditorRequest) {
+    return MarkdownPasteCommand(
+      content: request.content,
+      pastePosition: request.pastePosition,
+    );
+  }
+  return null;
+};
+
 class EditorState {
   late MutableDocument document;
   late MutableDocumentComposer composer;
@@ -112,6 +123,7 @@ class EditorState {
       },
       requestHandlers: [
         refreshInlineFormattingRequestHandler,
+        markdownPasteHandler,
         ...defaultRequestHandlers,
       ],
       reactionPipeline: [
