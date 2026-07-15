@@ -24,7 +24,7 @@ class LiveMarkdownController extends ChangeNotifier {
 
   VoidCallback? onChange;
   VoidCallback? onSelectionChange;
-  VoidCallback? onFocusChange;
+  ValueChanged<bool>? onFocusChange;
   VoidCallback? onReloadRequested;
 
   LiveMarkdownController({String? initialMarkdown}) {
@@ -45,7 +45,7 @@ class LiveMarkdownController extends ChangeNotifier {
   }
 
   void _onFocusChanged() {
-    onFocusChange?.call();
+    onFocusChange?.call(_editorState!.editorFocusNode.hasFocus);
   }
 
   void detachFromEditor() {

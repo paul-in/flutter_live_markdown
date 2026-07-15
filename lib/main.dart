@@ -49,8 +49,8 @@ class _MyHomePageState extends State<MyHomePage> {
       _selCount++;
       if (_apiMode) setState(() {});
     };
-    _ctrl.onFocusChange = () {
-      _isFocused = !_isFocused;
+    _ctrl.onFocusChange = (focused) {
+      _isFocused = focused;
       if (_apiMode) setState(() {});
     };
   }
