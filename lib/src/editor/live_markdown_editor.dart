@@ -266,6 +266,7 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
           })
           .join('\n\n');
       widget.controller.syncFromDocument(markdown);
+      widget.controller.onHistoryChange?.call();
     });
   }
 

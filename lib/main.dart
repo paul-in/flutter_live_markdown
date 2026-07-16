@@ -31,6 +31,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   int _changeCount = 0;
   int _selCount = 0;
+  int _historyCount = 0;
+  bool _canUndo = false, _canRedo = false;
   bool _isFocused = false;
   String _extractedContent = '';
   bool _apiMode = true;
@@ -51,6 +53,12 @@ class _MyHomePageState extends State<MyHomePage> {
     };
     _ctrl.onFocusChange = (focused) {
       _isFocused = focused;
+      if (_apiMode) setState(() {});
+    };
+    _ctrl.onHistoryChange = () {
+      _historyCount++;
+      _canUndo = _ctrl.canUndo;
+      _canRedo = _ctrl.canRedo;
       if (_apiMode) setState(() {});
     };
   }
@@ -268,6 +276,7 @@ class _MyHomePageState extends State<MyHomePage> {
           _infoRow('onChange', '$_changeCount events'),
           _infoRow('onSelectionChange', '$_selCount events'),
           _infoRow('onFocusChange', _isFocused ? '✓ focused' : '✗ not focused'),
+          _infoRow('onHistoryChange', '$_historyCount events  U:${_canUndo ? "✓" : "✗"} R:${_canRedo ? "✓" : "✗"}'),
         ],
       );
 

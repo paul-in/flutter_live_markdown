@@ -26,6 +26,7 @@ class LiveMarkdownController extends ChangeNotifier {
   VoidCallback? onSelectionChange;
   ValueChanged<bool>? onFocusChange;
   VoidCallback? onReloadRequested;
+  VoidCallback? onHistoryChange;
 
   LiveMarkdownController({String? initialMarkdown}) {
     if (initialMarkdown != null) {
