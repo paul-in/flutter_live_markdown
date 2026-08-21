@@ -21,6 +21,7 @@ class LiveMarkdownController extends ChangeNotifier {
     _textCache = es.document
         .map((n) {
           final meta = n.metadata;
+          if (meta['isRawMode'] == true && n is TextNode) return n.text.toPlainText();
           return meta['rawMarkdown'] as String? ?? (n is TextNode ? n.text.toPlainText() : '');
         })
         .join('\n\n');
@@ -288,6 +289,6 @@ class LiveMarkdownController extends ChangeNotifier {
 
   /// Clears the undo/redo history.
   void clearHistory() {
-    debugPrint('[LiveMarkdownController] clearHistory() — not yet wired');
+    replaceContent(text);
   }
 }

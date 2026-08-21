@@ -228,6 +228,7 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
   }
 
   void _reload() {
+    final markdown = widget.controller.text;
     widget.controller.detachFromEditor();
     final oldScrollController = _editorState.scrollController;
     _editorState.document.removeListener(_onDocumentChange);
@@ -236,10 +237,7 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
     _editorState.document.dispose();
     _editorState.composer.dispose();
     _editorState.editor.dispose();
-    _editorState.initializeFromMarkdown(
-      widget.controller.text,
-      reuseScrollController: oldScrollController,
-    );
+    _editorState.initializeFromMarkdown(markdown, reuseScrollController: oldScrollController);
     widget.controller.attachToEditor(_editorState);
     _editorState.document.addListener(_onDocumentChange);
     _rawModeManager = RawModeManager(
@@ -254,6 +252,7 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         widget.controller.setCursorAfterReload(pendingCursor);
+        _editorState.editorFocusNode.requestFocus();
       });
     }
   }
