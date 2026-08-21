@@ -73,56 +73,76 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        body: Row(
-          children: [
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: LiveMarkdownEditor(
-                  controller: _ctrl,
-                  deferToPointerUp: _deferToPointerUp,
-                  cursorInsideMarkers: _cursorInsideMarkers,
-                ),
-              ),
-            ),
-            Container(width: 1, color: Colors.grey.shade300),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildSection('Editor config'),
-                    const SizedBox(height: 4),
-                    _configToggle('Defer selection to pointer up', _deferToPointerUp, (v) {
-                      if (v != null) setState(() => _deferToPointerUp = v);
-                    }),
-                    _configToggle('Cursor inside markers', _cursorInsideMarkers, (v) {
-                      if (v != null) setState(() => _cursorInsideMarkers = v);
-                    }),
-                    const SizedBox(height: 12),
-                    _buildSection('API'),
-                    _apiToggle(),
-                    const SizedBox(height: 8),
-                    _selectionInfo(),
-                    const SizedBox(height: 8),
-                    _actionButtons(),
-                    const SizedBox(height: 8),
-                    _scrollToField(),
-                    const SizedBox(height: 8),
-                    _replaceField(),
-                    const SizedBox(height: 8),
-                    _extractField(),
-                    const SizedBox(height: 8),
-                    _callbackInfo(),
-                  ],
-                ),
-              ),
-            ),
-          ],
+  Widget build(BuildContext context) {
+    final editorSection = Padding(
+      padding: const EdgeInsets.all(16),
+      child: LiveMarkdownEditor(
+        controller: _ctrl,
+        deferToPointerUp: _deferToPointerUp,
+        cursorInsideMarkers: _cursorInsideMarkers,
+      ),
+    );
+
+    final controlsSection = SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSection('Editor config'),
+          const SizedBox(height: 4),
+          _configToggle('Defer selection to pointer up', _deferToPointerUp, (v) {
+            if (v != null) setState(() => _deferToPointerUp = v);
+          }),
+          _configToggle('Cursor inside markers', _cursorInsideMarkers, (v) {
+            if (v != null) setState(() => _cursorInsideMarkers = v);
+          }),
+          const SizedBox(height: 12),
+          _buildSection('API'),
+          _apiToggle(),
+          const SizedBox(height: 8),
+          _selectionInfo(),
+          const SizedBox(height: 8),
+          _actionButtons(),
+          const SizedBox(height: 8),
+          _scrollToField(),
+          const SizedBox(height: 8),
+          _replaceField(),
+          const SizedBox(height: 8),
+          _extractField(),
+          const SizedBox(height: 8),
+          _callbackInfo(),
+        ],
+      ),
+    );
+
+    return Scaffold(
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth > 800) {
+              // Mode Bureau / Web (Côte à côte)
+              return Row(
+                children: [
+                  Expanded(child: editorSection),
+                  Container(width: 1, color: Colors.grey.shade300),
+                  Expanded(child: controlsSection),
+                ],
+              );
+            } else {
+              // Mode Mobile (L'un au dessus de l'autre)
+              return Column(
+                children: [
+                  Expanded(flex: 3, child: editorSection),
+                  Container(height: 1, color: Colors.grey.shade300),
+                  Expanded(flex: 2, child: controlsSection),
+                ],
+              );
+            }
+          },
         ),
-      );
+      ),
+    );
+  }
 
   Widget _configToggle(String label, bool value, ValueChanged<bool?> onChanged) => Row(
         children: [
