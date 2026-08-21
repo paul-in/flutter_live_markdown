@@ -1,6 +1,11 @@
 name: flutter_live_markdown
 description: "A Live Markdown editor built on top of super_editor."
 repository: https://github.com/paul-in/flutter_live_markdown
+topics:
+  - markdown
+  - editor
+  - text-editor
+  - super-editor
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 
