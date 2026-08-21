@@ -9,9 +9,25 @@ import '../parsing/inline_formatter.dart';
 // Public API
 class LiveMarkdownController extends ChangeNotifier {
   String _text = '';
+  String? _textCache;
   EditorState? _editorState;
 
-  String get text => _text;
+  String get text {
+    if (_textCache != null) return _textCache!;
+
+    final es = _editorState;
+    if (es == null) return _text;
+
+    _textCache = es.document
+        .map((n) {
+          final meta = n.metadata;
+          return meta['rawMarkdown'] as String? ?? (n is TextNode ? n.text.toPlainText() : '');
+        })
+        .join('\n\n');
+
+    _text = _textCache!;
+    return _textCache!;
+  }
 
   int? _pendingCursor;
 
@@ -66,6 +82,7 @@ class LiveMarkdownController extends ChangeNotifier {
   /// raw-markdown offset after the reload.
   void replaceContent(String markdown, {int? cursor}) {
     _text = markdown;
+    _textCache = markdown;
     _pendingCursor = cursor;
     onReloadRequested?.call();
     notifyListeners();
@@ -139,10 +156,9 @@ class LiveMarkdownController extends ChangeNotifier {
     }
   }
 
-  /// Internal: sync _text from the editor without reinitializing.
-  void syncFromDocument(String markdown) {
-    if (_text == markdown) return;
-    _text = markdown;
+  /// Internal: mark the document as dirty so text is recomputed lazily.
+  void markNeedsTextUpdate() {
+    _textCache = null;
     notifyListeners();
     onChange?.call();
   }

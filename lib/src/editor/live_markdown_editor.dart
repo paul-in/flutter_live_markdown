@@ -260,13 +260,7 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
   void _onDocumentChange(DocumentChangeLog changeLog) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final markdown = _editorState.document
-          .map((n) {
-            final meta = n.metadata;
-            return meta['rawMarkdown'] as String? ?? (n is TextNode ? n.text.toPlainText() : '');
-          })
-          .join('\n\n');
-      widget.controller.syncFromDocument(markdown);
+      widget.controller.markNeedsTextUpdate();
       widget.controller.onHistoryChange?.call();
     });
   }
