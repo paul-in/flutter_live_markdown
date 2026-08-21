@@ -2,12 +2,13 @@ import 'package:flutter/widgets.dart';
 import 'package:super_editor/super_editor.dart';
 
 import '../model/markdown_node_metadata.dart';
-import '../model/markdown_utils.dart';
-import '../model/offset_mapper.dart';
-import '../model/selection_expander.dart';
+import '../parsing/markdown_utils.dart';
+import '../mappers/offset_mapper.dart';
+import '../mappers/selection_expander.dart';
 import '../parsing/inline_formatter.dart';
 import 'editor_state.dart';
 
+// Orchestrator of the Raw / visual mode: analysis focus, changes, ...
 class RawModeManager {
   final EditorState editorState;
   bool _isPointerDown = false;

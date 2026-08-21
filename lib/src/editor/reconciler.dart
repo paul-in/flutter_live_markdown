@@ -4,6 +4,8 @@ import '../model/markdown_block.dart';
 import '../parsing/inline_formatter.dart';
 import '../parsing/markdown_splitter.dart';
 
+
+// Listen every change, ask the Splitter the number of blocks and compare if it changes. It rebuilds blocks if number has changed.
 class MarkdownReconciler extends EditReaction {
   final DocumentNode Function(MarkdownBlock) createNodeForBlock;
 

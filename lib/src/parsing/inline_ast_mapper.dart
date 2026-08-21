@@ -1,8 +1,10 @@
 import 'package:dart_markdown/dart_markdown.dart' as md;
 
+
+// Get marker and regions positions inside a raw text
 class InlineSpanMap {
-  final List<({int rawStart, int rawEnd, int visualStart, int visualEnd})> spans;
-  final List<({int start, int end})> regions;
+  final List<({int start, int end})> regions; // area where it is markers
+  final List<({int rawStart, int rawEnd, int visualStart, int visualEnd})> spans; // raw content
 
   InlineSpanMap._({
     required this.spans,
@@ -14,9 +16,11 @@ class InlineSpanMap {
       return InlineSpanMap._(spans: [], regions: []);
     }
 
+    // Decompose into markdown ast
     final parser = md.Markdown();
     final nodes = parser.parse(raw);
 
+    // init
     final spans = <({int rawStart, int rawEnd, int visualStart, int visualEnd})>[];
     int visualOffset = 0;
 
@@ -31,7 +35,7 @@ class InlineSpanMap {
         ));
         visualOffset += textLen;
       } else if (node is md.Element) {
-        if (node.type == 'image') {
+        if (node.type == 'image') { // handle LATEX similarly ?
           spans.add((
             rawStart: node.start.offset,
             rawEnd: node.end.offset,
@@ -47,10 +51,12 @@ class InlineSpanMap {
       }
     }
 
+    // get index of all spans
     for (final node in nodes) {
       walk(node);
     }
 
+    // infer markers region positions
     final regions = <({int start, int end})>[];
     if (spans.isNotEmpty) {
       if (spans.first.rawStart > 0) {

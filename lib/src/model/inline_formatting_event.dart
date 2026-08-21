@@ -1,5 +1,6 @@
 import 'package:super_editor/super_editor.dart';
 
+// Signal for the refreshInlineFormattingrequest
 class InlineFormattingRefreshEvent extends NodeChangeEvent {
   const InlineFormattingRefreshEvent(super.nodeId);
 

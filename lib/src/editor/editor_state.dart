@@ -3,7 +3,7 @@ import 'package:super_editor/super_editor.dart';
 
 import '../model/markdown_block.dart';
 import '../model/markdown_node_metadata.dart';
-import '../model/markdown_utils.dart';
+import '../parsing/markdown_utils.dart';
 import '../parsing/markdown_splitter.dart';
 import 'merge_rapid_markdown_typing_policy.dart';
 import 'raw_formatting_reaction.dart';
@@ -11,6 +11,7 @@ import 'reconciler.dart';
 import 'markdown_paste_command.dart';
 import 'refresh_inline_formatting.dart';
 
+// Used by the editor_state. Called once at doc init and then by the reconciler when blocks change.
 DocumentNode createNodeForBlock(MarkdownBlock block) {
   final nodeId = Editor.createNodeId();
   final raw = block.text;
@@ -108,6 +109,7 @@ class EditorState {
 
   bool isUndoing = false;
 
+  // Entry point 
   void initializeFromMarkdown(String raw, {ScrollController? reuseScrollController}) {
     composer = MutableDocumentComposer();
     editorFocusNode = FocusNode();
@@ -126,7 +128,7 @@ class EditorState {
         markdownPasteHandler,
         ...defaultRequestHandlers,
       ],
-      reactionPipeline: [
+      reactionPipeline: [ // listen every actions
         MarkdownReconciler(createNodeForBlock: createNodeForBlock),
         RawFormattingReaction(),
       ],

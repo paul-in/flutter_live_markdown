@@ -1,3 +1,4 @@
+// Block created during initial splitting of the document;
 class MarkdownBlock {
   final String text;
   final int startOffset;

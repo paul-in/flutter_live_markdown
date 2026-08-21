@@ -6,7 +6,7 @@ import '../model/markdown_node_metadata.dart';
 import '../parsing/inline_formatter.dart';
 
 
-// Contains Public API
+// Public API
 class LiveMarkdownController extends ChangeNotifier {
   String _text = '';
   EditorState? _editorState;

@@ -96,7 +96,7 @@ ExecutionInstruction _customEnterHandler({
       return ExecutionInstruction.haltExecution;
     }
 
-    // ≤1 block: safe continuation via editor.execute
+    // <=1 block: safe continuation via editor.execute
     editContext.editor.execute([
       ReplaceNodeRequest(
         existingNodeId: node.id,
@@ -162,6 +162,7 @@ ExecutionInstruction _customEnterHandler({
   return ExecutionInstruction.haltExecution;
 }
 
+// Glue
 class LiveMarkdownEditor extends StatefulWidget {
   final LiveMarkdownController controller;
   final bool deferToPointerUp;

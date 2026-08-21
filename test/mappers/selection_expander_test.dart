@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_live_markdown/src/model/offset_mapper.dart';
-import 'package:flutter_live_markdown/src/model/selection_expander.dart';
+import 'package:flutter_live_markdown/src/mappers/offset_mapper.dart';
+import 'package:flutter_live_markdown/src/mappers/selection_expander.dart';
 
 void main() {
   group('markerRegions', () {

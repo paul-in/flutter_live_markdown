@@ -1,6 +1,8 @@
 import 'package:dart_markdown/dart_markdown.dart' as md;
 import '../model/markdown_block.dart';
 
+// Cut the whole document into MarkdownBlocks (headings, blockquote, ... Not inline)
+// Called from the reconciler on each actions to analys if there is a block number change
 List<MarkdownBlock> splitMarkdownIntoBlocks(String raw) {
   if (raw.isEmpty) return [];
 

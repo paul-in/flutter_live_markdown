@@ -2,6 +2,8 @@ import 'package:super_editor/super_editor.dart';
 
 import '../model/inline_formatting_event.dart';
 
+// override default super_editor input merging for undo/redo that considers each input + styling as separate transactions (which is not the case from the user pov).
+// This is the standard way of doing it to implement HistoryGroupingPolicy
 class MergeRapidMarkdownTypingPolicy implements HistoryGroupingPolicy {
   const MergeRapidMarkdownTypingPolicy([this._maxMergeTime = const Duration(milliseconds: 100)]);
 

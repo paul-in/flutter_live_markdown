@@ -2,13 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:super_editor/super_editor.dart';
 
-/// Replaces [PasteEditorCommand] for markdown-aware editing.
-///
-/// Instead of splitting pasted content at every newline (which destroys
-/// multi-line blocks like tables, code blocks, etc.), this inserts the raw
-/// clipboard text as a single raw-mode [ParagraphNode]. The
-/// [MarkdownReconciler] then handles splitting it into correct markdown
-/// blocks in its Pass 1 (raw-mode multi-block split).
+// Bypass the super_editor paste because it decomposes every \n into different nodes, but we set a custom decomposition logic, done after pasting by the reconciler
 class MarkdownPasteCommand extends EditCommand {
   MarkdownPasteCommand({
     required this.content,

@@ -1,5 +1,6 @@
 import 'package:super_editor/super_editor.dart';
 
+// shift the styling from the visual that is given by parseInlineMarkdown to take in account the markers and display them.
 AttributedText applyInlineFormatting(String raw) {
   if (raw.isEmpty) return AttributedText();
 

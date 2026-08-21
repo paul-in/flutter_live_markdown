@@ -2,9 +2,10 @@ import 'package:flutter/services.dart';
 import 'package:super_editor/super_editor.dart';
 
 import '../model/markdown_node_metadata.dart';
-import '../model/offset_mapper.dart';
+import '../mappers/offset_mapper.dart';
 import '../parsing/inline_formatter.dart';
 
+// unfold text before merging block to make sure markers are kept
 ExecutionInstruction unfoldBeforeAction({
   required SuperEditorContext editContext,
   required KeyEvent keyEvent,

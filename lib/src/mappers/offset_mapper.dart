@@ -1,13 +1,20 @@
 import '../parsing/inline_ast_mapper.dart';
 
+// Fundamental mappers to link raw and visual content. Offset could be marked as position
 int mapVisualToRawOffset(String visual, String raw, int visualOffset) {
   return InlineSpanMap.fromRaw(raw).mapVisualToRaw(visualOffset);
 }
 
+int mapRawToVisualOffset(String visual, String raw, int rawOffset) {
+  return InlineSpanMap.fromRaw(raw).mapRawToVisual(rawOffset);
+}
+
+// get regions where it is markers
 List<({int start, int end})> markerRegions(String visual, String raw) {
   return InlineSpanMap.fromRaw(raw).markerRegions;
 }
 
+// Returns position of the cursor depending on if we want it in the interior or the exterior
 int adjustCursorAtMarkerBoundary(
   String visual,
   String raw,
@@ -28,8 +35,4 @@ int adjustCursorAtMarkerBoundary(
     }
   }
   return rawOffset;
-}
-
-int mapRawToVisualOffset(String visual, String raw, int rawOffset) {
-  return InlineSpanMap.fromRaw(raw).mapRawToVisual(rawOffset);
 }

@@ -2,10 +2,11 @@ import 'package:super_editor/super_editor.dart';
 
 import '../model/inline_formatting_event.dart';
 import '../model/markdown_node_metadata.dart';
-import '../model/markdown_utils.dart';
+import '../parsing/markdown_utils.dart';
 import '../parsing/inline_formatter.dart';
 import 'refresh_inline_formatting.dart';
 
+// Listens every change in text and adjust inline/block styling instantly when typing 
 class RawFormattingReaction extends EditReaction {
   @override
   void modifyContent(EditContext editorContext, RequestDispatcher requestDispatcher, List<EditEvent> changeList) {

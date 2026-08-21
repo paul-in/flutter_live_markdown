@@ -2,6 +2,7 @@ import 'package:super_editor/super_editor.dart';
 
 import '../model/inline_formatting_event.dart';
 
+// To avoid infinite loop when modifying text
 class RefreshInlineFormattingRequest implements EditRequest {
   final String nodeId;
   final DocumentNode newNode;

@@ -1,6 +1,6 @@
 import 'offset_mapper.dart';
 
-// This allows for 
+// Move cursor at the external index of markers (even if this is nested like **_test_**). It gives back the new index of the position at the extremity.
 
 int expandStartEdge(String visual, String raw, int rawStart) {
   if (rawStart <= 0) return rawStart;
