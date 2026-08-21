@@ -182,54 +182,6 @@ void main() {
     });
   });
 
-  group('expandEdge', () {
-    test('expands left when right after opening marker', () {
-      final visual = 'bold';
-      final raw = '**bold**';
-      final expanded = expandEdge(visual, raw, 2);
-      expect(expanded, 0);
-    });
-
-    test('expands right when at closing marker start', () {
-      final visual = 'bold';
-      final raw = '**bold**';
-      final expanded = expandEdge(visual, raw, 6);
-      expect(expanded, 8);
-    });
-
-    test('expands left for offset after opening marker (link)', () {
-      final visual = 'lien';
-      final raw = '[lien](texte)';
-      // offset=1 (right after '[')
-      // left expands to 0, right doesn't change
-      final expanded = expandEdge(visual, raw, 1);
-      expect(expanded, 0);
-    });
-
-    test('expands right for offset at closing marker start (link)', () {
-      final visual = 'lien';
-      final raw = '[lien](texte)';
-      // offset=5 (at ']', start of closing marker region)
-      // left doesn't change, right expands to 13
-      final expanded = expandEdge(visual, raw, 5);
-      expect(expanded, 13);
-    });
-
-    test('does not expand offset inside content', () {
-      final visual = 'bold';
-      final raw = '**bold**';
-      expect(expandEdge(visual, raw, 3), 3);
-      expect(expandEdge(visual, raw, 4), 4);
-    });
-
-    test('no expansion for image placeholder', () {
-      final visual = '\uFFFC';
-      final raw = '![alt](url.png)';
-      expect(expandEdge(visual, raw, 0), 0);
-      expect(expandEdge(visual, raw, 16), 16);
-    });
-  });
-
   group('adjustCursorAtMarkerBoundary', () {
     test('pushes past opening markers at start of bold', () {
       final visual = 'bold';

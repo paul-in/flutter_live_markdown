@@ -1,5 +1,7 @@
 import 'offset_mapper.dart';
 
+// This allows for 
+
 int expandStartEdge(String visual, String raw, int rawStart) {
   if (rawStart <= 0) return rawStart;
   final regions = markerRegions(visual, raw);
@@ -52,11 +54,3 @@ int expandEndEdge(String visual, String raw, int rawEnd) {
   }
 }
 
-int expandEdge(String visual, String raw, int rawOffset) {
-  if (rawOffset <= 0 || rawOffset >= raw.length) return rawOffset;
-  final left = expandStartEdge(visual, raw, rawOffset);
-  final right = expandEndEdge(visual, raw, rawOffset);
-  if (left < rawOffset) return left;
-  if (right > rawOffset) return right;
-  return rawOffset;
-}
