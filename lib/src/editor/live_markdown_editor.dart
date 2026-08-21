@@ -182,6 +182,7 @@ class LiveMarkdownEditor extends StatefulWidget {
 class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
   late EditorState _editorState;
   late RawModeManager _rawModeManager;
+  Key _superEditorKey = UniqueKey();
 
   @override
   void initState() {
@@ -247,7 +248,7 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
       cursorInsideMarkers: widget.cursorInsideMarkers,
     );
     _editorState.composer.selectionNotifier.addListener(_rawModeManager.onSelectionChange);
-    setState(() {});
+    setState(() => _superEditorKey = UniqueKey());
     final pendingCursor = widget.controller.consumePendingCursor();
     if (pendingCursor != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -272,6 +273,7 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
       onPointerUp: (_) => _rawModeManager.setPointerDown(false),
       onPointerCancel: (_) => _rawModeManager.setPointerDown(false),
       child: SuperEditor(
+        key: _superEditorKey,
         editor: _editorState.editor,
         focusNode: _editorState.editorFocusNode,
         scrollController: _editorState.scrollController,
