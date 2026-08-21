@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_live_markdown/flutter_live_markdown.dart';
 
-const _initial = '# Welcome\n\nThis is **bold** and *italic*\n\n> A blockquote\n\nPlain paragraph with `code` inline\n\n---\n\nA [link](https://example.com)';
+const _initial = '# Welcome\n\nThis is **bold** and *italic*\n\n> A blockquote\n\nPlain paragraph with `code` inline\n\n---\n\nA [link](https://example.com)\n\n![](https://picsum.photos/400/200)\n\nI love flutter !';
 
 void main() => runApp(const MyApp());
 
