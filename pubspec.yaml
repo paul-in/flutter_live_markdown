@@ -16,7 +16,7 @@ repository: https://github.com/paul-in/flutter_live_markdown
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 0.1.0
+version: 0.1.0-dev.1
 
 environment:
   sdk: ^3.12.2
@@ -32,9 +32,9 @@ dependencies:
     sdk: flutter
 
   cupertino_icons: ^1.0.8
-  super_editor: 0.3.0-dev.52
-  attributed_text: 0.4.7
-  super_text_layout: 0.1.21
+  super_editor: ^0.3.0-dev.52
+  attributed_text: ^0.4.7
+  super_text_layout: ^0.1.21
   dart_markdown: ^3.1.7
 
 dev_dependencies:

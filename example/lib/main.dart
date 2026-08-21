@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_live_markdown/live_markdown.dart';
+import 'package:flutter_live_markdown/flutter_live_markdown.dart';
 
 const _initial = '# Welcome\n\nThis is **bold** and *italic*\n\n> A blockquote\n\nPlain paragraph with `code` inline\n\n---\n\nA [link](https://example.com)';
 
