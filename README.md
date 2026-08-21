@@ -42,7 +42,8 @@ LiveMarkdownController:
 **onFocusChange(bool hasFocus)** - Triggered when the editor gains or loses focus. The hasFocus parameter is true if the editor just gained focus (is now active).
 **onHistoryChange** - Triggered when the undo/redo stack is updated (useful for updating the enabled/disabled state of undo/redo buttons in a toolbar).
 
-## Known Limitations (or improvements to come!)
+## Known Bugs/Limitations (or improvements to come!)
 
 - Undo/redo can be quite unstable.
 - Nested elements are poorly rendered. That's because super_editor works with a flattened node tree.
+- "---", tables and images can also be unstable for now.
