@@ -169,6 +169,7 @@ class _MyHomePageState extends State<MyHomePage> {
           _btn('Redo', _ctrl.canRedo, () => _ctrl.redo()),
           _btn('Blur', true, () => _ctrl.blur()),
           _btn('Clear Sel', true, () => _ctrl.clearSelection()),
+          _btn('Clear Hist', true, () => _ctrl.clearHistory()),
         ],
       );
 
@@ -191,15 +192,18 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget _replaceField() => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const Text('Replace content:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(width: 80, child: Text('Replace all:', style: TextStyle(fontSize: 13))),
               Expanded(
                 child: TextField(
                   controller: _replaceCtrl,
                   maxLines: 3,
                   style: const TextStyle(fontSize: 13),
                   decoration: const InputDecoration(
+                    hintText: 'Enter new markdown...',
                     isDense: true,
                     border: OutlineInputBorder(),
                     contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
@@ -207,30 +211,39 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
               ),
               const SizedBox(width: 8),
-              _btn('Set', true, () {
-                if (_replaceCtrl.text.isNotEmpty) {
-                  final cursor = int.tryParse(_replaceCursorCtrl.text);
-                  _ctrl.replaceContent(_replaceCtrl.text, cursor: cursor);
-                  _replaceCtrl.clear();
-                }
-              }),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              const SizedBox(width: 80, child: Text('Cursor offset:', style: TextStyle(fontSize: 13))),
-              SizedBox(
-                width: 80,
-                child: TextField(
-                  controller: _replaceCursorCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    isDense: true,
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('Cursor at:', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      const SizedBox(width: 4),
+                      SizedBox(
+                        width: 50,
+                        child: TextField(
+                          controller: _replaceCursorCtrl,
+                          keyboardType: TextInputType.number,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 13),
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
+                  const SizedBox(height: 6),
+                  _btn('Replace', true, () {
+                    if (_replaceCtrl.text.isNotEmpty) {
+                      final cursor = int.tryParse(_replaceCursorCtrl.text);
+                      _ctrl.replaceContent(_replaceCtrl.text, cursor: cursor);
+                      _replaceCtrl.clear();
+                    }
+                  }),
+                ],
               ),
             ],
           ),
