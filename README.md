@@ -4,6 +4,8 @@
 
 A Live Markdown Editor inspired by Obsidian, with a toggle between raw and formatted text at the block level. Flutter Live Markdown was initially built for the long-term learning app [Mycelium](https://github.com/mycel-project/mycelium).
 
+> ⚠️ **Note**: This package is in its very early stages of development. Contributions, issues, and PRs are highly encouraged!
+
 This package is an extension built on top of the [Super Editor](https://github.com/Flutter-Bounty-Hunters/super_editor) package.
 
 I couldn't find a live rendering system for Markdown that allows for editing, similar to what CodeMirror Markdown does. It is built on top of Super Editor because it manages the block logic, allowing multiple styles (headings, blockquotes, bold, images, ...) to cohabit without having to reparse the entire document on each change, while precisely handling cursor position and selection. Thus, super_editor serves as the graphical and interactive engine of this package.
