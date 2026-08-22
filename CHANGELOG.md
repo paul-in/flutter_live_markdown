@@ -1,5 +1,5 @@
 # Changelog
-## 0.1.0-dev.2
+## 0.1.0-dev.2 - 2026-08-22
 ### Fixed
 - When using getContentBetween extracted text was outdated.
 - Use GlobalKey on Editor to avoid desync
