@@ -28,6 +28,7 @@ LiveMarkdownController:
 - **text** - Gets the raw text of the editor
 - **selectionStart** - Absolute raw-markdown offset of the selection start
 - **selectionEnd** - Absolute raw-markdown offset of the selection extent
+- **hasSelection** - Returns true if a text selection is active (not collapsed)
 - **canUndo** - Whether undo is available
 - **canRedo** - Whether redo is available
 - **readOnly** - Whether editor is readOnly

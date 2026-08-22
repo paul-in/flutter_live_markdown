@@ -196,7 +196,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Widget _selectionInfo() => _infoRow(
         'Selection',
-        '${_ctrl.selectionStart} – ${_ctrl.selectionEnd}',
+        '${_ctrl.selectionStart} – ${_ctrl.selectionEnd} (hasSelection: ${_ctrl.hasSelection})',
       );
 
   Widget _actionButtons() => Wrap(

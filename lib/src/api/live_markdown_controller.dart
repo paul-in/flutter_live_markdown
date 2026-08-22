@@ -176,6 +176,10 @@ class LiveMarkdownController extends ChangeNotifier {
     notifyListeners();
     onChange?.call();
   }
+  bool get hasSelection {
+    final sel = _editorState?.composer.selection;
+    return sel != null && !sel.isCollapsed;
+  }
 
   /// Returns the absolute raw-markdown offset of the selection start.
   int get selectionStart {

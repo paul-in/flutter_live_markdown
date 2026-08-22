@@ -1,4 +1,8 @@
 # Changelog
+
+## 0.2.1-dev.1 - 2026-08-22
+- Add hasSelection getter to API
+
 ## 0.2.0-dev.1 - 2026-08-22
 - Add setReadOnly + readOnly getter param to API
 - Add requestFocus method to API
