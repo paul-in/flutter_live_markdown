@@ -1,4 +1,6 @@
 # Changelog
+## 0.2.1-dev.2 - 
+- Do not call onChange() hook on replaceContent()
 
 ## 0.2.1-dev.1 - 2026-08-22
 - Add hasSelection getter to API

@@ -90,17 +90,18 @@ class LiveMarkdownController extends ChangeNotifier {
 
   // ── Public API ──────────────────────────────────────────
 
-  /// Replaces all content and reinitializes the editor.
-  ///
+  /// Replaces the entire document content programmatically.
+  /// 
   /// If [cursor] is provided, places the cursor at that global
   /// raw-markdown offset after the reload.
+  /// 
+  /// Note: This does NOT trigger [onChange] since it is not a user-initiated edit.
   void replaceContent(String markdown, {int? cursor}) {
     _text = markdown;
     _textCache = markdown;
     _pendingCursor = cursor;
     onReloadRequested?.call();
     notifyListeners();
-    onChange?.call();
   }
 
   void setCursorAfterReload(int globalOffset) {
