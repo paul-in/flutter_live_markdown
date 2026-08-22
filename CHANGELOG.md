@@ -1,5 +1,5 @@
 # Changelog
-## 0.2.0-dev.1 
+## 0.2.0-dev.1 - 2026-08-22
 - Add setReadOnly + readOnly getter param to API
 - Add requestFocus method to API
 - Remove unused setShowKeyboard method
