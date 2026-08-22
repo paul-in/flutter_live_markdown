@@ -205,6 +205,7 @@ class _MyHomePageState extends State<MyHomePage> {
           _btn('Undo', _ctrl.canUndo, () => _ctrl.undo()),
           _btn('Redo', _ctrl.canRedo, () => _ctrl.redo()),
           _btn('Blur', true, () => _ctrl.blur()),
+          _btn('Focus', true, () => _ctrl.requestFocus()),
           _btn('Clear Sel', true, () => _ctrl.clearSelection()),
           _btn('Clear Hist', true, () => _ctrl.clearHistory()),
         ],

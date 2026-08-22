@@ -38,6 +38,7 @@ LiveMarkdownController:
 - **getContentBetween(int start, int end)** - Raw markdown text between two absolute offsets
 - **scrollTo(int globalOffset)** - Scrolls the editor to try to bring the position at [globalOffset] into view
 - **blur()** - Removes focus from the editor
+- **requestFocus()** - Requests focus for the editor (opens software keyboard on mobile)
 - **clearSelection()** - Clears the current selection (collapses to a single point at the cursor)
 - **replaceContent(String markdown, {int? cursor})** - Replaces the content with `markdown`
 - **clearHistory()** - Clears the undo/redo history. (Calls replaceContent with active text)

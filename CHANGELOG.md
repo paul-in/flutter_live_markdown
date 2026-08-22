@@ -1,6 +1,7 @@
 # Changelog
-## 0.2.0-dev.1 - 2026-08-22
+## 0.2.0-dev.1 
 - Add setReadOnly + readOnly getter param to API
+- Add requestFocus method to API
 
 ## 0.1.0-dev.2 - 2026-08-22
 ### Fixed

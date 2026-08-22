@@ -247,6 +247,11 @@ class LiveMarkdownController extends ChangeNotifier {
     _editorState?.editorFocusNode.unfocus();
   }
 
+  /// Requests focus for the editor (opens software keyboard on mobile).
+  void requestFocus() {
+    _editorState?.editorFocusNode.requestFocus();
+  }
+
   /// Clears the current selection (collapses to a single point at cursor).
   void clearSelection() {
     final es = _editorState;
