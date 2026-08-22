@@ -42,7 +42,6 @@ LiveMarkdownController:
 - **clearSelection()** - Clears the current selection (collapses to a single point at the cursor)
 - **replaceContent(String markdown, {int? cursor})** - Replaces the content with `markdown`
 - **clearHistory()** - Clears the undo/redo history. (Calls replaceContent with active text)
-- **setShowKeyboard(bool show)** - Controls whether the software keyboard should be shown. (WIP)
 - **setReadOnly(bool readOnly)** - Controls whether the editor is readOnly.
 
 - **onChange** - Triggered when the markdown text content changes.

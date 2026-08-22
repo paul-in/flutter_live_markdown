@@ -300,12 +300,6 @@ class LiveMarkdownController extends ChangeNotifier {
     });
   }
 
-  /// Controls whether the software keyboard should be shown.
-  /// Requires a widget rebuild to take effect — stubbed until the widget infrastructure is ready.
-  void setShowKeyboard(bool show) {
-    debugPrint('[LiveMarkdownController] setShowKeyboard($show) — not yet wired');
-  }
-
   /// Clears the undo/redo history.
   void clearHistory() {
     replaceContent(text);
