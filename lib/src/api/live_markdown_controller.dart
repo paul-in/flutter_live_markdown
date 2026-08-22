@@ -195,7 +195,7 @@ class LiveMarkdownController extends ChangeNotifier {
     int global = 0;
     for (final n in doc) {
       if (n.id == nodeId) return global + localOffset;
-      final raw = n.metadata['rawMarkdown'] as String? ?? (n is TextNode ? n.text.toPlainText() : '');
+      final meta = n.metadata; final raw = (meta['isRawMode'] == true && n is TextNode) ? n.text.toPlainText() : meta['rawMarkdown'] as String? ?? (n is TextNode ? n.text.toPlainText() : '');
       global += raw.length + 2;
     }
     return global + localOffset;
@@ -203,10 +203,11 @@ class LiveMarkdownController extends ChangeNotifier {
 
   /// Returns the raw markdown text between two absolute offsets.
   String getContentBetween(int start, int end) {
+    final currentText = text;
     if (start < 0) start = 0;
-    if (end > _text.length) end = _text.length;
+    if (end > currentText.length) end = currentText.length;
     if (start >= end) return '';
-    return _text.substring(start, end);
+    return currentText.substring(start, end);
   }
 
   /// Scrolls the editor to try to bring the position at [globalOffset] into view.
@@ -217,7 +218,7 @@ class LiveMarkdownController extends ChangeNotifier {
     int accumulated = 0;
     int nodeIndex = 0;
     for (final n in es.document) {
-      final raw = n.metadata['rawMarkdown'] as String? ?? (n is TextNode ? n.text.toPlainText() : '');
+      final meta = n.metadata; final raw = (meta['isRawMode'] == true && n is TextNode) ? n.text.toPlainText() : meta['rawMarkdown'] as String? ?? (n is TextNode ? n.text.toPlainText() : '');
       final rawLen = raw.length;
       if (globalOffset <= accumulated + rawLen) break;
       accumulated += rawLen + 2;
