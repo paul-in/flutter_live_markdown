@@ -183,11 +183,11 @@ class LiveMarkdownController extends ChangeNotifier {
   }
 
   /// Returns the absolute raw-markdown offset of the selection start.
-  int get selectionStart {
+  int? get selectionStart {
     final es = _editorState;
-    if (es == null) return 0;
+    if (es == null) return null;
     final sel = es.composer.selection;
-    if (sel == null) return 0;
+    if (sel == null) return null;
     if (sel.base.nodePosition is! TextNodePosition) {
       return _nodeToGlobalOffset(sel.base.nodeId, 0);
     }
@@ -195,11 +195,11 @@ class LiveMarkdownController extends ChangeNotifier {
   }
 
   /// Returns the absolute raw-markdown offset of the selection extent.
-  int get selectionEnd {
+  int? get selectionEnd {
     final es = _editorState;
-    if (es == null) return 0;
+    if (es == null) return null;
     final sel = es.composer.selection;
-    if (sel == null) return 0;
+    if (sel == null) return null;
     if (sel.extent.nodePosition is! TextNodePosition) {
       return _nodeToGlobalOffset(sel.extent.nodeId, 0);
     }
