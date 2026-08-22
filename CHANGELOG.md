@@ -1,7 +1,8 @@
 # Changelog
-## 0.2.1-dev.2 - 
+## 0.2.2-dev.1 - 2026-08-22
 - Do not call onChange() hook on replaceContent()
 - Nullify selection on focus loss
+- Return empty MarkdownBlock when content is empty instead of an empty array
 
 ## 0.2.1-dev.1 - 2026-08-22
 - Add hasSelection getter to API
