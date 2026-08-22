@@ -1,4 +1,7 @@
 # Changelog
+## 0.2.0-dev.1 - 2026-08-22
+- Add setReadOnly + readOnly getter param to API
+
 ## 0.1.0-dev.2 - 2026-08-22
 ### Fixed
 - When using getContentBetween extracted text was outdated.

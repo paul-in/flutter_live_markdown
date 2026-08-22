@@ -47,6 +47,17 @@ class LiveMarkdownController extends ChangeNotifier {
   /// Internal
   VoidCallback? onReloadRequested;
 
+  bool _readOnly = false;
+  bool get readOnly => _readOnly;
+
+  /// Controls whether the editor is readOnly.
+  void setReadOnly(bool readOnly) {
+    if (_readOnly == readOnly) return;
+    _readOnly = readOnly;
+    onReloadRequested?.call();
+    notifyListeners();
+  }
+
   LiveMarkdownController({String? initialMarkdown}) {
     if (initialMarkdown != null) {
       _text = initialMarkdown;

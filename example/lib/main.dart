@@ -101,6 +101,7 @@ class _MyHomePageState extends State<MyHomePage> {
           const SizedBox(height: 12),
           _buildSection('API'),
           _apiToggle(),
+          _readOnlyToggle(),
           const SizedBox(height: 8),
           _selectionInfo(),
           const SizedBox(height: 8),
@@ -176,6 +177,20 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
           Text('ON : events tracked in real time  OFF : max fluidity',
               style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+        ],
+      );
+
+  Widget _readOnlyToggle() => Row(
+        children: [
+          const Text('Read Only', style: TextStyle(fontSize: 13)),
+          Switch(
+            value: _ctrl.readOnly,
+            onChanged: (v) {
+              _ctrl.setReadOnly(v);
+              setState(() {});
+            },
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
         ],
       );
 

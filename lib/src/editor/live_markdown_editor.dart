@@ -267,6 +267,22 @@ class _LiveMarkdownEditorState extends State<LiveMarkdownEditor> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.controller.readOnly) {
+      return SuperReader(
+        key: _superEditorKey,
+        editor: _editorState.editor,
+        focusNode: _editorState.editorFocusNode,
+        scrollController: _editorState.scrollController,
+        componentBuilders: [
+          TableWrapperBuilder(_editorState.document, readOnlyDefaultComponentBuilders),
+          ImageWrapperBuilder(_editorState.document, readOnlyDefaultComponentBuilders),
+          const BlockquoteComponentBuilder(),
+          ...readOnlyDefaultComponentBuilders,
+        ],
+        stylesheet: customStylesheet(readOnlyDefaultStylesheet),
+      );
+    }
+
     return Listener(
       onPointerDown: (_) => _rawModeManager.setPointerDown(true),
       onPointerUp: (_) => _rawModeManager.setPointerDown(false),
