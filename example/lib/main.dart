@@ -24,6 +24,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  final _editorKey = GlobalKey();
   late final LiveMarkdownController _ctrl;
   final _scrollOffsetCtrl = TextEditingController();
   final _replaceCtrl = TextEditingController();
@@ -77,6 +78,7 @@ class _MyHomePageState extends State<MyHomePage> {
     final editorSection = Padding(
       padding: const EdgeInsets.all(16),
       child: LiveMarkdownEditor(
+        key: _editorKey,
         controller: _ctrl,
         deferToPointerUp: _deferToPointerUp,
         cursorInsideMarkers: _cursorInsideMarkers,
