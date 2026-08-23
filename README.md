@@ -55,3 +55,10 @@ LiveMarkdownController:
 - Undo/redo can be quite unstable.
 - Nested elements are poorly rendered. That's because super_editor works with a flattened node tree.
 - "---", tables and images can also be unstable for now.
+
+### Internal copy/paste
+Markdown distinguishes between \n (soft breaks) and \n\n (paragraph breaks). Since SuperEditor's source of truth is its node tree, paragraph breaks (\n\n) are represented as visual margins between nodes rather than actual text characters.
+
+While this works perfectly for rendering, it creates a limitation during copy operations: SuperEditor exports multiple blocks to the clipboard separated by a single \n, using the exact same character for both soft breaks and paragraph breaks. As a result, when pasting this text back into the editor, the distinction is lost, and multiple paragraphs are flattened into a single block.
+
+This issue mostly occurs during internal copy/pasting. When copying from external sources like the web or other Markdown-aware software, paragraph breaks are usually correctly formatted as \n\n in the clipboard, which pastes flawlessly. To my knowledge there is no way to override this plain-text export behavior natively in super_editor. If that was possible the idea would be to distinguish \n and \n\n when copying.
