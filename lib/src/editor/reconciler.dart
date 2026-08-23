@@ -36,11 +36,15 @@ class MarkdownReconciler extends EditReaction {
 
       final nodeIndex = document.getNodeIndexById(node.id);
       if (nodeIndex == -1) continue;
+      // Clear composing region before deleting the node to prevent IME crashes
+      allRequests.add(const ClearComposingRegionRequest());
       allRequests.add(DeleteNodeRequest(nodeId: node.id));
 
       String? prevId;
+      DocumentNode? lastCreatedNode;
       for (int i = 0; i < blocks.length; i++) {
         final newNode = _createRawModeNode(blocks[i]);
+        lastCreatedNode = newNode;
         if (i == 0) {
           allRequests.add(InsertNodeAtIndexRequest(nodeIndex: nodeIndex, newNode: newNode));
         } else {
@@ -53,6 +57,23 @@ class MarkdownReconciler extends EditReaction {
           }
         }
         prevId = newNode.id;
+      }
+
+      // If the cursor was completely outside the parsed blocks (e.g., inside trailing \n\n 
+      // that the parser ignores), force the cursor to the end of the very last newly created node.
+      if (!selectionHandled && lastCreatedNode != null) {
+        allRequests.add(ChangeSelectionRequest(
+          DocumentSelection.collapsed(
+            position: DocumentPosition(
+              nodeId: lastCreatedNode.id,
+              nodePosition: lastCreatedNode is TextNode
+                  ? TextNodePosition(offset: lastCreatedNode.text.length)
+                  : const UpstreamDownstreamNodePosition.downstream(),
+            ),
+          ),
+          SelectionChangeType.placeCaret,
+          SelectionReason.userInteraction,
+        ));
       }
     }
 
