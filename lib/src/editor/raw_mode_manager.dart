@@ -368,7 +368,7 @@ class RawModeManager {
             newNode: ListItemNode(
               id: node.id,
               itemType: parsedNode.type,
-              text: parsedNode.text,
+              text: _restoreTrailingWhitespace(parsedNode.text, innerRaw),
               indent: parsedNode.indent,
               metadata: itemMetadata,
             ),
@@ -382,7 +382,7 @@ class RawModeManager {
             existingNodeId: node.id,
             newNode: TaskNode(
               id: node.id,
-              text: parsedNode.text,
+              text: _restoreTrailingWhitespace(parsedNode.text, innerRaw),
               isComplete: parsedNode.isComplete,
               metadata: itemMetadata,
             ),
@@ -425,7 +425,7 @@ class RawModeManager {
             existingNodeId: node.id,
             newNode: ParagraphNode(
               id: node.id,
-              text: parsedNode.text,
+              text: _restoreTrailingWhitespace(parsedNode.text, innerRaw),
               metadata: itemMetadata,
             ),
           ),
@@ -438,7 +438,7 @@ class RawModeManager {
           existingNodeId: node.id,
           newNode: ParagraphNode(
             id: node.id,
-            text: parsedNode is TextNode ? parsedNode.text : AttributedText(raw),
+            text: parsedNode is TextNode ? _restoreTrailingWhitespace(parsedNode.text, innerRaw) : AttributedText(raw),
             metadata: itemMetadata,
           ),
         ),
@@ -467,6 +467,25 @@ class RawModeManager {
     } catch (_) {
       return [];
     }
+  }
+
+  AttributedText _restoreTrailingWhitespace(AttributedText parsed, String raw) {
+    String trailing = '';
+    int i = raw.length - 1;
+    while (i >= 0 && (raw[i] == '\n' || raw[i] == ' ')) {
+      trailing = raw[i] + trailing;
+      i--;
+    }
+    if (trailing.isNotEmpty) {
+      // Flutter's TextPainter collapses trailing newlines if there is no cursor on them.
+      // To prevent the block from visually shrinking/unfolding when losing focus, 
+      // we inject a Non-Breaking Space (\u00A0) after trailing newlines in visual mode.
+      if (trailing.contains('\n')) {
+        trailing += '\u00A0';
+      }
+      return parsed.copyAndAppend(AttributedText(trailing));
+    }
+    return parsed;
   }
 
   void dispose() {}
