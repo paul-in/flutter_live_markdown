@@ -110,13 +110,14 @@ class MarkdownReconciler extends EditReaction {
       if (pos.nodePosition is! TextNodePosition) continue;
 
       final offset = (pos.nodePosition as TextNodePosition).offset;
-      if (offset >= block.startOffset && offset <= block.endOffset) {
+      if (offset <= block.endOffset) {
         if (newNode is TextNode) {
+          final localOffset = (offset < block.startOffset) ? 0 : (offset - block.startOffset);
           requests.add(ChangeSelectionRequest(
             DocumentSelection.collapsed(
               position: DocumentPosition(
                 nodeId: newNode.id,
-                nodePosition: TextNodePosition(offset: offset - block.startOffset),
+                nodePosition: TextNodePosition(offset: localOffset),
               ),
             ),
             SelectionChangeType.placeCaret,
