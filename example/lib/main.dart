@@ -296,8 +296,8 @@ class _MyHomePageState extends State<MyHomePage> {
               const Text('Extract selection:', style: TextStyle(fontSize: 13)),
               const SizedBox(width: 12),
               _btn('Extract', true, () {
-                int f = _ctrl.selectionStart;
-                int t = _ctrl.selectionEnd;
+                int f = _ctrl.selectionStart ?? 0;
+                int t = _ctrl.selectionEnd ?? 0;
                 if (f > t) (f, t) = (t, f);
                 _extractedContent = f != t ? _ctrl.getContentBetween(f, t) : '';
                 setState(() {});
