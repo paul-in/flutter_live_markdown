@@ -1,4 +1,12 @@
 # Changelog
+## 0.2.3-dev.1 - 2026-08-24
+- Fix extraction generating double line breaks between consecutive raw lists
+- Let the reconciler handle copy/pasting to fix spacing and duplication bugs
+- Fix cursor jumping to next block after a soft-break
+- Prevent IME crash on double soft-break
+- Fix soft-breaks visually collapsing when block is not focused
+- Update example app to match new selection typing
+
 ## 0.2.2-dev.1 - 2026-08-22
 - Do not call onChange() hook on replaceContent()
 - Nullify selection on focus loss
