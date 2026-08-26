@@ -1,10 +1,12 @@
+> ⚠️ This package is not maintained for now, as another, more powerful markdown package is being built at https://pub.dev/packages/live_markdown_editor
+
 # Flutter Live Markdown
 
 ![Live Markdown Editor Demo](doc/demo.gif)
 
 A Live Markdown Editor inspired by Obsidian, with a toggle between raw and formatted text at the block level. Flutter Live Markdown was initially built for the long-term learning app [Mycelium](https://github.com/mycel-project/mycelium).
 
-> ⚠️ **Note**: This package is in its very early stages of development. Contributions, issues, and PRs are highly encouraged!
+> This package is in its very early stages of development. Contributions, issues, and PRs are highly encouraged!
 
 This package is an extension built on top of the [Super Editor](https://github.com/Flutter-Bounty-Hunters/super_editor) package.
 
