@@ -1,5 +1,4 @@
-> ⚠️ This package is not maintained for now, as another, more powerful markdown package is being built at https://pub.dev/packages/live_markdown_editor
-
+> ⚠️ This package is not maintained for now, as another, more powerful markdown package is being built at https://github.com/paul-in/ReMarkEr
 # Flutter Live Markdown
 
 ![Live Markdown Editor Demo](doc/demo.gif)
